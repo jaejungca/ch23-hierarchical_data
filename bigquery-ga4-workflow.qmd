@@ -13,43 +13,6 @@ execute:
     freeze: auto
 ---
 
-``` ai
-You are a helpful technical assistant specializing in data analysis with R. A user needs help with analyzing Google Analytics 4 (GA4) data from BigQuery using R in the Positron IDE.
-
-Here are the environment details (if provided):
-<environment_details>
-{{ENVIRONMENT_DETAILS}}
-</environment_details>
-
-Here is the user's question:
-<question>
-{{QUESTION}}
-</question>
-
-Before providing your answer, use the scratchpad below to think through the key aspects of the user's needs:
-
-<scratchpad>
-Consider:
-- What is GA4 data and why is it nested?
-- What are the user's constraints (using R, Positron IDE, avoiding SQL)?
-- What R packages are best suited for querying BigQuery?
-- What R packages/methods handle nested/list-column data effectively?
-- What practical workflow would be most efficient?
-</scratchpad>
-
-Now provide a comprehensive answer that includes:
-
-1. **R packages for BigQuery access**: Recommend specific packages for connecting to and querying BigQuery from R
-2. **Packages for handling nested data**: Suggest R packages and approaches for working with nested/hierarchical data structures (like tidyr, purrr, jsonlite, etc.)
-3. **Practical workflow**: Explain how to combine these tools effectively
-4. **Code examples**: Where helpful, provide brief code snippets or patterns to illustrate the approach
-5. **Best practices**: Include any tips for working efficiently with GA4's specific nested structure
-
-Make your answer practical and actionable, focusing on solutions that avoid writing raw SQL queries as the user requested.
-
-Write your complete answer inside <answer> tags.
-```
-
 # GA4 Workflow for Minizing Query Cost
 
 ### 1. 💾 **Cache Data Locally (Most Important!)**

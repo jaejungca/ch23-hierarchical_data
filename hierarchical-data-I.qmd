@@ -912,13 +912,13 @@ event_params_wide <- ga4_raw |>
   ) |>
   unnest_longer(event_params) |> #stage 1
   unnest_wider(event_params) # stage 1b
-  
-event_params_wide_flat <- event_params_wide |> 
-  unnest_wider(value, names_sep = "_") |>  # → value_string_value, value_int_value, etc.
+
+event_params_wide_flat <- event_params_wide |>
+  unnest_wider(value, names_sep = "_") |> # → value_string_value, value_int_value, etc.
   unnest_wider(value_1)
 
-  # ── Stage 2: Consolidate the four typed value columns into one ─────────────
- event_params_wide_flat <- event_params_wide_flat |> 
+# ── Stage 2: Consolidate the four typed value columns into one ─────────────
+event_params_wide_flat <- event_params_wide_flat |>
   mutate(
     param_value = coalesce(
       string_value,
