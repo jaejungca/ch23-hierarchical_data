@@ -7,3 +7,5 @@ hierarchical-data_cache/
 hierarchical-data-I_cache/
 hierarchical-data-I_files/
 data/
+ga4_export.parquet
+ga4*cache
