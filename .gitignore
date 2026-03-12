@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+bq*.qmd
+hierarchical-data_cache/
+hierarchical-data-I_cache/
+hierarchical-data-I_files/
+data/

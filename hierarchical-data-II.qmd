@@ -1,0 +1,1391 @@
+---
+title: "Rectangling Hierarchical Data"
+subtitle: "R4DS Chapter 23 Concepts Applied to Google Analytics 4 in BigQuery"
+author: "Jae Jung"
+date: "March 8, 2026"
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-title: "Contents"
+    toc-expand: true
+    code-fold: show
+    code-copy: true
+    code-tools: true
+    highlight-style: github
+    fig-width: 9
+    fig-height: 5
+    fig-align: center
+    df-print: paged
+    number-sections: true
+    smooth-scroll: true
+    embed-resources: true
+    callout-appearance: minimal
+execute:
+  warning: false
+  message: false
+  cache: true
+---
+
+# Part 3: Marketing Analytics in Practice {#part3}
+
+Now we assemble all the pieces into complete marketing analyses. Each section below builds an analytical table from the raw GA4 data using the rectangling tools we have learned, then produces a visualisation and interprets it.
+
+## Building the Master Analytical Table
+
+Rather than re-running the pipelines for every analysis, we assemble one wide, analysis-ready table that joins the flattened structs, flattened event_params, and e-commerce data:
+
+```{r}
+#| label: master-table
+#| cache: true
+
+# ── Step 1: Flatten struct columns ────────────────────────────────────────────
+ga4_structs <- ga4_raw |>
+  select(
+    event_date,
+    event_name,
+    event_timestamp,
+    user_pseudo_id,
+    device,
+    geo,
+    traffic_source
+  ) |>
+  unnest_wider(device, names_sep = "_") |>
+  unnest_wider(geo, names_sep = "_") |>
+  unnest_wider(traffic_source, names_sep = "_")
+
+# ── Step 2: Flatten event_params ──────────────────────────────────────────────
+ga4_params <- ga4_raw |>
+  select(
+    event_date,
+    event_name,
+    event_timestamp,
+    user_pseudo_id,
+    event_params
+  ) |>
+  unnest_longer(event_params) |>
+  unnest_wider(event_params) |>
+  unnest_wider(value, names_sep = "_") |>
+  mutate(
+    param_value = coalesce(
+      value_string_value,
+      as.character(value_int_value),
+      as.character(value_float_value),
+      as.character(value_double_value)
+    )
+  ) |>
+  select(
+    event_date,
+    event_name,
+    event_timestamp,
+    user_pseudo_id,
+    key,
+    param_value
+  ) |>
+  pivot_wider(
+    names_from = key,
+    values_from = param_value,
+    values_fn = first
+  )
+
+# ── Step 3: Flatten ecommerce struct ──────────────────────────────────────────
+ga4_ecomm <- ga4_raw |>
+  select(event_date, event_name, event_timestamp, user_pseudo_id, ecommerce) |>
+  unnest_wider(ecommerce, names_sep = "_")
+
+# ── Step 4: Join all together ─────────────────────────────────────────────────
+ga4_master <- ga4_structs |>
+  left_join(
+    ga4_params,
+    by = c("event_date", "event_name", "event_timestamp", "user_pseudo_id")
+  ) |>
+  left_join(
+    ga4_ecomm,
+    by = c("event_date", "event_name", "event_timestamp", "user_pseudo_id")
+  ) |>
+  # Convert event_timestamp (microseconds since Unix epoch) to datetime
+  mutate(
+    event_dt = as.POSIXct(
+      as.numeric(event_timestamp) / 1e6,
+      origin = "1970-01-01",
+      tz = "America/Los_Angeles" # GA4 obfuscated dataset is in US/Pacific
+    ),
+    event_date = ymd(event_date)
+  )
+
+glimpse(ga4_master)
+```
+
+```{r}
+#| label: master-table-summary
+
+cat(
+  "Master table dimensions:",
+  nrow(ga4_master),
+  "rows ×",
+  ncol(ga4_master),
+  "columns\n",
+  "Date range:",
+  format(min(ga4_master$event_date)),
+  "to",
+  format(max(ga4_master$event_date)),
+  "\n",
+  "Unique users:",
+  n_distinct(ga4_master$user_pseudo_id),
+  "\n",
+  "Unique event types:",
+  n_distinct(ga4_master$event_name),
+  "\n"
+)
+```
+
+## Analysis 1: Traffic Source Performance {#traffic-analysis}
+
+**Marketing Question**: Which channels are driving the most engaged traffic?
+
+```{r}
+#| label: traffic-source-prep
+
+traffic_analysis <- ga4_master |>
+  filter(event_name == "session_start") |>
+  mutate(
+    # Clean and standardise channel labels
+    medium = case_when(
+      is.na(traffic_source_medium) ~ "(none)",
+      traffic_source_medium == "(none)" ~ "direct",
+      traffic_source_medium == "organic" ~ "organic search",
+      traffic_source_medium %in% c("cpc", "ppc", "paid") ~ "paid search",
+      str_detect(traffic_source_medium, "email") ~ "email",
+      str_detect(
+        traffic_source_medium,
+        "social|referral"
+      ) ~ traffic_source_medium,
+      TRUE ~ traffic_source_medium
+    )
+  ) |>
+  group_by(medium) |>
+  summarise(
+    sessions = n(),
+    unique_users = n_distinct(user_pseudo_id),
+    .groups = "drop"
+  ) |>
+  # Join in engagement and conversion metrics from full event stream
+  left_join(
+    ga4_master |>
+      filter(event_name == "session_start") |>
+      mutate(
+        medium = case_when(
+          is.na(traffic_source_medium) ~ "(none)",
+          traffic_source_medium == "(none)" ~ "direct",
+          traffic_source_medium == "organic" ~ "organic search",
+          traffic_source_medium %in% c("cpc", "ppc", "paid") ~ "paid search",
+          str_detect(traffic_source_medium, "email") ~ "email",
+          TRUE ~ traffic_source_medium
+        )
+      ) |>
+      group_by(medium, user_pseudo_id) |>
+      summarise(.groups = "drop") |>
+      left_join(
+        ga4_master |>
+          filter(event_name == "purchase") |>
+          distinct(user_pseudo_id) |>
+          mutate(converted = TRUE),
+        by = "user_pseudo_id"
+      ) |>
+      group_by(medium) |>
+      summarise(
+        users_who_purchased = sum(!is.na(converted)),
+        .groups = "drop"
+      ),
+    by = "medium"
+  ) |>
+  mutate(
+    conversion_rate = users_who_purchased / unique_users,
+    sessions_pct = sessions / sum(sessions)
+  ) |>
+  arrange(desc(sessions))
+
+traffic_analysis
+```
+
+```{r}
+#| label: traffic-source-chart
+#| fig-height: 6
+
+# ── Panel A: Session Volume by Channel ────────────────────────────────────────
+p1 <- traffic_analysis |>
+  filter(sessions > 10) |>
+  mutate(medium = fct_reorder(medium, sessions)) |>
+  ggplot(aes(x = medium, y = sessions, fill = medium)) +
+  geom_col(show.legend = FALSE, width = 0.65) +
+  geom_text(
+    aes(label = comma(sessions)),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = comma,
+    expand = expansion(mult = c(0, 0.18))
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Sessions by Traffic Channel",
+    subtitle = "Jan 1–7, 2021 · Google Merchandise Store",
+    x = NULL,
+    y = "Sessions"
+  )
+
+# ── Panel B: Conversion Rate by Channel ───────────────────────────────────────
+p2 <- traffic_analysis |>
+  filter(sessions > 10, !is.na(conversion_rate)) |>
+  mutate(medium = fct_reorder(medium, conversion_rate)) |>
+  ggplot(aes(x = medium, y = conversion_rate, fill = medium)) +
+  geom_col(show.legend = FALSE, width = 0.65) +
+  geom_text(
+    aes(label = percent(conversion_rate, accuracy = 0.1)),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = percent,
+    expand = expansion(mult = c(0, 0.22))
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Purchase Conversion Rate by Channel",
+    subtitle = "Users who completed a purchase ÷ users who started a session",
+    x = NULL,
+    y = "Conversion Rate"
+  )
+
+# Display side by side using patchwork if available, else stacked
+if (requireNamespace("patchwork", quietly = TRUE)) {
+  library(patchwork)
+  p1 + p2
+} else {
+  print(p1)
+  print(p2)
+}
+```
+
+::: callout-tip
+## Marketing Interpretation
+
+-   **Volume vs. quality**: The channel with the most sessions is not necessarily the best performer. Compare session volume against conversion rate to identify high-value channels.
+-   **Direct traffic** often represents users who already know the brand — expect higher conversion rates.
+-   **Organic search** volume indicates SEO health; low conversion from organic can signal a landing page or audience-fit problem.
+:::
+
+## Analysis 2: Device and Geographic Breakdown {#device-geo}
+
+**Marketing Question**: Where are users coming from, and on what devices?
+
+```{r}
+#| label: device-geo-prep
+
+# Daily sessions by device category
+daily_device <- ga4_master |>
+  filter(event_name == "session_start") |>
+  count(event_date, device_category) |>
+  mutate(device_category = str_to_title(device_category))
+
+# Geographic distribution — top countries
+top_countries <- ga4_master |>
+  filter(event_name == "session_start") |>
+  count(geo_country, sort = TRUE) |>
+  filter(!is.na(geo_country)) |>
+  slice_head(n = 15) |>
+  mutate(
+    pct = n / sum(n),
+    geo_country = fct_reorder(geo_country, n)
+  )
+
+# Browser share (for device-specific targeting decisions)
+browser_share <- ga4_master |>
+  filter(event_name == "session_start") |>
+  count(device_browser, device_category) |>
+  filter(!is.na(device_browser)) |>
+  group_by(device_category) |>
+  mutate(pct = n / sum(n)) |>
+  slice_max(pct, n = 5) |>
+  ungroup()
+```
+
+```{r}
+#| label: daily-device-chart
+#| fig-height: 4.5
+
+daily_device |>
+  ggplot(aes(
+    x = event_date,
+    y = n,
+    colour = device_category,
+    group = device_category
+  )) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 2.5) +
+  scale_x_date(date_labels = "%a\n%b %d", date_breaks = "1 day") +
+  scale_y_continuous(labels = comma) +
+  scale_colour_manual(
+    values = c(
+      "Desktop" = "#4285F4",
+      "Mobile" = "#34A853",
+      "Tablet" = "#FBBC05"
+    )
+  ) +
+  labs(
+    title = "Daily Sessions by Device Category",
+    subtitle = "Jan 1–7, 2021 · Google Merchandise Store",
+    x = NULL,
+    y = "Sessions",
+    colour = "Device"
+  ) +
+  theme(legend.position = "top")
+```
+
+```{r}
+#| label: top-countries-chart
+#| fig-height: 6
+
+top_countries |>
+  ggplot(aes(x = geo_country, y = n, fill = pct)) +
+  geom_col(width = 0.7) +
+  geom_text(
+    aes(label = glue("{comma(n)}\n({percent(pct, accuracy = 0.1)})")),
+    hjust = -0.1,
+    size = 3,
+    lineheight = 0.9
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = comma,
+    expand = expansion(mult = c(0, 0.25))
+  ) +
+  scale_fill_gradient(
+    low = "#c6dbef",
+    high = "#2171b5",
+    labels = percent,
+    name = "% of Sessions"
+  ) +
+  labs(
+    title = "Sessions by Country (Top 15)",
+    subtitle = "Jan 1–7, 2021 · Google Merchandise Store",
+    x = NULL,
+    y = "Sessions"
+  )
+```
+
+```{r}
+#| label: browser-heatmap
+#| fig-height: 5
+
+browser_share |>
+  mutate(device_browser = fct_reorder(device_browser, pct)) |>
+  ggplot(aes(
+    x = device_category,
+    y = device_browser,
+    fill = pct,
+    label = percent(pct, accuracy = 0.1)
+  )) +
+  geom_tile(colour = "white", linewidth = 0.8) +
+  geom_text(size = 3.5, fontface = "bold") +
+  scale_fill_gradient(
+    low = "#f7fbff",
+    high = "#2171b5",
+    labels = percent,
+    name = "Share"
+  ) +
+  labs(
+    title = "Browser Share by Device Category (Top 5 per Device)",
+    subtitle = "Useful for QA testing priority decisions",
+    x = "Device Category",
+    y = "Browser"
+  ) +
+  theme(panel.grid = element_blank())
+```
+
+## Analysis 3: Content Performance {#content-analysis}
+
+**Marketing Question**: Which pages attract the most traffic, and how do users navigate the site?
+
+This analysis requires extracting `page_location` from `event_params` — a direct application of the key-value pipeline we built in Part 2.
+
+```{r}
+#| label: content-prep
+
+page_views <- ga4_master |>
+  filter(event_name == "page_view", !is.na(page_location)) |>
+  mutate(
+    # Parse the URL path from the full URL
+    page_path = str_remove(page_location, "^https?://[^/]+"),
+    page_path = str_remove(page_path, "\\?.*$"), # Remove query strings
+    page_path = str_remove(page_path, "#.*$"), # Remove anchors
+    page_path = if_else(page_path == "" | is.na(page_path), "/", page_path),
+
+    # Categorise pages into sections for rolled-up analysis
+    page_section = case_when(
+      page_path == "/" ~ "Home",
+      str_detect(page_path, "^/google\\+re|^/store|^/shop") ~ "Store",
+      str_detect(page_path, "^/product") ~ "Product Pages",
+      str_detect(page_path, "^/basket|^/cart") ~ "Cart",
+      str_detect(page_path, "^/checkout") ~ "Checkout",
+      str_detect(page_path, "^/signin|^/log") ~ "Sign In",
+      str_detect(page_path, "^/brands") ~ "Brands",
+      TRUE ~ "Other"
+    )
+  )
+
+# Top individual pages
+top_pages <- page_views |>
+  count(page_path, page_section, sort = TRUE) |>
+  slice_head(n = 20)
+
+# Page section rollup
+section_rollup <- page_views |>
+  count(page_section, sort = TRUE) |>
+  mutate(
+    pct = n / sum(n),
+    page_section = fct_reorder(page_section, n)
+  )
+```
+
+```{r}
+#| label: top-pages-chart
+#| fig-height: 7
+
+top_pages |>
+  slice_head(n = 15) |>
+  mutate(
+    page_path = str_trunc(page_path, 45),
+    page_path = fct_reorder(page_path, n)
+  ) |>
+  ggplot(aes(x = page_path, y = n, fill = page_section)) +
+  geom_col(width = 0.7) +
+  geom_text(
+    aes(label = comma(n)),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = comma,
+    expand = expansion(mult = c(0, 0.18))
+  ) +
+  scale_fill_brewer(palette = "Set2", name = "Section") +
+  labs(
+    title = "Top 15 Pages by Page Views",
+    subtitle = "Jan 1–7, 2021 · Colour = site section",
+    x = NULL,
+    y = "Page Views"
+  ) +
+  theme(legend.position = "bottom")
+```
+
+```{r}
+#| label: section-rollup-chart
+#| fig-height: 4
+
+section_rollup |>
+  ggplot(aes(x = page_section, y = n, fill = page_section)) +
+  geom_col(show.legend = FALSE, width = 0.65) +
+  geom_text(
+    aes(label = glue("{comma(n)}\n{percent(pct, accuracy = 0.1)}")),
+    vjust = -0.4,
+    size = 3.5,
+    lineheight = 0.9
+  ) +
+  scale_y_continuous(
+    labels = comma,
+    expand = expansion(mult = c(0, 0.2))
+  ) +
+  scale_fill_brewer(palette = "Paired") +
+  labs(
+    title = "Page Views by Site Section",
+    subtitle = "Rolled-up view using URL path categorisation",
+    x = NULL,
+    y = "Page Views"
+  )
+```
+
+```{r}
+#| label: referrer-analysis
+
+# What external pages referred traffic to the site?
+top_referrers <- ga4_master |>
+  filter(
+    event_name == "page_view",
+    !is.na(page_referrer),
+    page_referrer != "",
+    !str_detect(page_referrer, "google\\.com/merchandise|merch\\.google")
+  ) |>
+  mutate(
+    referrer_domain = str_extract(page_referrer, "(?<=://)[^/]+"),
+    referrer_domain = str_remove(referrer_domain, "^www\\.")
+  ) |>
+  count(referrer_domain, sort = TRUE) |>
+  filter(!is.na(referrer_domain)) |>
+  slice_head(n = 10)
+
+top_referrers |>
+  gt() |>
+  tab_header(
+    title = "Top 10 Referring Domains",
+    subtitle = "External sites sending traffic to Google Merchandise Store"
+  ) |>
+  fmt_number(columns = n, decimals = 0) |>
+  cols_label(referrer_domain = "Referring Domain", n = "Referrals") |>
+  opt_stylize(style = 1)
+```
+
+## Analysis 4: E-commerce Funnel {#ecommerce-analysis}
+
+**Marketing Question**: Where in the purchase funnel are we losing customers?
+
+```{r}
+#| label: funnel-prep
+
+# Define funnel stages and their GA4 event names
+funnel_stages <- tibble(
+  stage_order = 1:6,
+  event_name = c(
+    "view_item",
+    "add_to_cart",
+    "view_cart",
+    "begin_checkout",
+    "add_payment_info",
+    "purchase"
+  ),
+  stage_label = c(
+    "View Item",
+    "Add to Cart",
+    "View Cart",
+    "Begin Checkout",
+    "Add Payment Info",
+    "Purchase"
+  )
+)
+
+# Count unique users at each funnel stage
+funnel_data <- funnel_stages |>
+  left_join(
+    ga4_master |>
+      filter(event_name %in% funnel_stages$event_name) |>
+      group_by(event_name) |>
+      summarise(users = n_distinct(user_pseudo_id), .groups = "drop"),
+    by = "event_name"
+  ) |>
+  arrange(stage_order) |>
+  mutate(
+    users = replace_na(users, 0),
+    top_users = max(users),
+    pct_of_top = users / top_users,
+    pct_prev = users / lag(users), # Drop-off to previous stage
+    drop_off = 1 - pct_prev
+  )
+
+funnel_data |>
+  select(stage_label, users, pct_of_top, pct_prev, drop_off) |>
+  gt() |>
+  tab_header(
+    title = "Purchase Funnel Analysis",
+    subtitle = "Unique users reaching each stage · Jan 1–7, 2021"
+  ) |>
+  fmt_number(columns = users, decimals = 0) |>
+  fmt_percent(columns = c(pct_of_top, pct_prev, drop_off), decimals = 1) |>
+  cols_label(
+    stage_label = "Funnel Stage",
+    users = "Users",
+    pct_of_top = "% of Top Stage",
+    pct_prev = "Retained from Prior",
+    drop_off = "Drop-off Rate"
+  ) |>
+  data_color(
+    columns = drop_off,
+    method = "numeric",
+    palette = c("#ffffff", "#f4433620"),
+    na_color = "white"
+  ) |>
+  sub_missing(missing_text = "—") |>
+  opt_stylize(style = 1)
+```
+
+```{r}
+#| label: funnel-chart
+#| fig-height: 5.5
+
+funnel_data |>
+  mutate(stage_label = fct_inorder(stage_label)) |>
+  ggplot(aes(x = stage_label, y = users)) +
+  geom_col(
+    aes(fill = pct_of_top),
+    width = 0.75,
+    show.legend = FALSE
+  ) +
+  geom_text(
+    aes(
+      label = glue(
+        "{comma(users)} users\n({percent(pct_of_top, accuracy=0.1)})"
+      )
+    ),
+    vjust = -0.4,
+    size = 3.5,
+    lineheight = 0.85,
+    fontface = "bold"
+  ) +
+  # Annotate drop-off rates between bars
+  geom_text(
+    data = funnel_data |> filter(!is.na(drop_off)),
+    aes(
+      x = as.numeric(fct_inorder(stage_label)) - 0.5,
+      y = max(funnel_data$users) * 0.55,
+      label = glue("▼ {percent(drop_off, accuracy=1)}\ndrop-off")
+    ),
+    size = 3,
+    colour = "#e53935",
+    lineheight = 0.85
+  ) +
+  scale_y_continuous(
+    labels = comma,
+    expand = expansion(mult = c(0, 0.2))
+  ) +
+  scale_fill_gradient(low = "#bbdefb", high = "#1565c0") +
+  labs(
+    title = "Purchase Funnel: Users by Stage",
+    subtitle = "Jan 1–7, 2021 · Google Merchandise Store",
+    x = NULL,
+    y = "Unique Users"
+  ) +
+  theme(axis.text.x = element_text(size = 10))
+```
+
+```{r}
+#| label: revenue-analysis
+
+# Revenue analysis using the flattened ecommerce struct
+revenue_daily <- ga4_master |>
+  filter(event_name == "purchase") |>
+  group_by(event_date) |>
+  summarise(
+    transactions = n(),
+    total_revenue = sum(
+      as.numeric(ecommerce_purchase_revenue_in_usd),
+      na.rm = TRUE
+    ),
+    avg_order_value = mean(
+      as.numeric(ecommerce_purchase_revenue_in_usd),
+      na.rm = TRUE
+    ),
+    unique_buyers = n_distinct(user_pseudo_id),
+    .groups = "drop"
+  )
+
+revenue_daily |>
+  gt() |>
+  tab_header(
+    title = "Daily Revenue Summary",
+    subtitle = "Derived from ecommerce struct (Pattern 1 unnesting)"
+  ) |>
+  fmt_date(columns = event_date, date_style = "day_m_year") |>
+  fmt_number(columns = transactions, decimals = 0) |>
+  fmt_currency(columns = c(total_revenue, avg_order_value), currency = "USD") |>
+  fmt_number(columns = unique_buyers, decimals = 0) |>
+  cols_label(
+    event_date = "Date",
+    transactions = "Transactions",
+    total_revenue = "Revenue",
+    avg_order_value = "Avg. Order Value",
+    unique_buyers = "Unique Buyers"
+  ) |>
+  grand_summary_rows(
+    columns = c(transactions, total_revenue, unique_buyers),
+    fns = list(Total = ~ sum(., na.rm = TRUE)),
+    fmt = list(
+      ~ fmt_number(., columns = c(transactions, unique_buyers), decimals = 0),
+      ~ fmt_currency(., columns = total_revenue, currency = "USD")
+    )
+  ) |>
+  opt_stylize(style = 1)
+```
+
+```{r}
+#| label: revenue-chart
+#| fig-height: 4.5
+
+revenue_daily |>
+  ggplot(aes(x = event_date)) +
+  geom_col(
+    aes(y = total_revenue),
+    fill = "#1565c0",
+    width = 0.6,
+    alpha = 0.85
+  ) +
+  geom_line(
+    aes(y = avg_order_value * (max(total_revenue) / max(avg_order_value))),
+    colour = "#e65100",
+    linewidth = 1.2
+  ) +
+  geom_point(
+    aes(y = avg_order_value * (max(total_revenue) / max(avg_order_value))),
+    colour = "#e65100",
+    size = 3
+  ) +
+  scale_x_date(date_labels = "%a\n%b %d", date_breaks = "1 day") +
+  scale_y_continuous(
+    labels = dollar,
+    name = "Total Revenue (bars)",
+    sec.axis = sec_axis(
+      trans = ~ . *
+        (max(revenue_daily$avg_order_value) /
+          max(revenue_daily$total_revenue)),
+      name = "Avg. Order Value (line)",
+      labels = dollar
+    )
+  ) +
+  labs(
+    title = "Daily Revenue and Average Order Value",
+    subtitle = "Bars = total revenue · Orange line = avg order value",
+    x = NULL
+  )
+```
+
+## Analysis 5: Session Engagement Deep-Dive {#engagement}
+
+**Marketing Question**: Are sessions actually engaging, and which channels drive the most engaged sessions?
+
+This combines `event_params` extraction (Pattern 3) with struct unnesting (Pattern 1) in a single pipeline:
+
+```{r}
+#| label: engagement-analysis
+
+session_engagement <- ga4_master |>
+  filter(event_name == "session_start") |>
+  mutate(
+    # session_engaged comes from event_params (Pattern 3 — already flattened)
+    is_engaged = session_engaged == "1",
+    ga_session_num = as.integer(ga_session_number),
+    # device_category from device struct (Pattern 1 — already flattened)
+    device = str_to_title(device_category),
+    # traffic_source_medium from traffic_source struct (Pattern 1)
+    channel = case_when(
+      is.na(traffic_source_medium) |
+        traffic_source_medium == "(none)" ~ "Direct",
+      traffic_source_medium == "organic" ~ "Organic Search",
+      traffic_source_medium %in%
+        c("cpc", "ppc", "paid") ~ "Paid Search",
+      str_detect(traffic_source_medium, "email") ~ "Email",
+      str_detect(traffic_source_medium, "social") ~ "Social",
+      TRUE ~ str_to_title(traffic_source_medium)
+    )
+  ) |>
+  group_by(channel, device) |>
+  summarise(
+    sessions = n(),
+    engaged_sessions = sum(is_engaged, na.rm = TRUE),
+    engagement_rate = mean(is_engaged, na.rm = TRUE),
+    new_user_sessions = sum(ga_session_num == 1, na.rm = TRUE),
+    returning_sessions = sum(ga_session_num > 1, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  filter(sessions >= 20) # Filter to statistically meaningful segments
+
+session_engagement
+```
+
+```{r}
+#| label: engagement-heatmap
+#| fig-height: 5
+
+session_engagement |>
+  ggplot(aes(
+    x = device,
+    y = fct_reorder(channel, engagement_rate),
+    fill = engagement_rate
+  )) +
+  geom_tile(colour = "white", linewidth = 1) +
+  geom_text(
+    aes(label = percent(engagement_rate, accuracy = 1)),
+    fontface = "bold",
+    size = 4
+  ) +
+  scale_fill_gradient2(
+    low = "#d32f2f",
+    mid = "#fff176",
+    high = "#388e3c",
+    midpoint = 0.55,
+    labels = percent,
+    name = "Engagement\nRate"
+  ) +
+  labs(
+    title = "Session Engagement Rate by Channel × Device",
+    subtitle = glue(
+      "Engagement rate = % of sessions meeting Google's engagement criteria\n",
+      "(session_engaged parameter from event_params — Pattern 3 rectangling)"
+    ),
+    x = "Device Category",
+    y = "Traffic Channel"
+  ) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 11)
+  )
+```
+
+::: callout-tip
+## What is an "Engaged Session" in GA4?
+
+GA4 defines an engaged session as one that meets at least one of:
+
+-   Lasts longer than 10 seconds
+-   Has at least 2 page views or screen views
+-   Has a conversion event
+
+The `session_engaged` parameter (value `"1"` or `"0"`) in `event_params` is how GA4 records this classification. We extracted it using the Pattern 3 pipeline from Part 2.
+:::
+
+------------------------------------------------------------------------
+
+# Rectangling Reference: Complete Cheat Sheet {#cheatsheet}
+
+```{r}
+#| label: cheat-sheet-table
+#| echo: false
+
+tibble::tribble(
+  ~`GA4 Column`                                                         , ~`BigQuery Type`       , ~`Pattern` , ~`Pipeline` ,
+  "device"                                                              , "RECORD (struct)"      , "1"        ,
+  "unnest_wider(device, names_sep='_')"                                 ,
+  "geo"                                                                 , "RECORD (struct)"      , "1"        ,
+  "unnest_wider(geo, names_sep='_')"                                    ,
+  "traffic_source"                                                      , "RECORD (struct)"      , "1"        ,
+  "unnest_wider(traffic_source, names_sep='_')"                         ,
+  "app_info"                                                            , "RECORD (struct)"      , "1"        ,
+  "unnest_wider(app_info, names_sep='_')"                               ,
+  "user_ltv"                                                            , "RECORD (struct)"      , "1"        ,
+  "unnest_wider(user_ltv, names_sep='_')"                               ,
+  "ecommerce"                                                           , "RECORD (struct)"      , "1"        ,
+  "unnest_wider(ecommerce, names_sep='_')"                              ,
+  "items"                                                               , "RECORD REPEATED"      , "2"        ,
+  "unnest_longer(items) |> unnest_wider(items)"                         ,
+  "event_params"                                                        , "RECORD REPEATED (KV)" , "3"        ,
+  "unnest_longer() |> unnest_wider() ×2 |> coalesce() |> pivot_wider()" ,
+  "user_properties"                                                     , "RECORD REPEATED (KV)" , "3"        ,
+  "unnest_longer() |> unnest_wider() ×2 |> coalesce() |> pivot_wider()"
+) |>
+  gt() |>
+  tab_header(
+    title = "GA4 Rectangling Cheat Sheet",
+    subtitle = "Complete reference for every nested column type"
+  ) |>
+  tab_style(
+    style = cell_fill(color = "#e8f5e9"),
+    locations = cells_body(rows = `Pattern` == "1")
+  ) |>
+  tab_style(
+    style = cell_fill(color = "#e3f2fd"),
+    locations = cells_body(rows = `Pattern` == "2")
+  ) |>
+  tab_style(
+    style = cell_fill(color = "#fff8e1"),
+    locations = cells_body(rows = `Pattern` == "3")
+  ) |>
+  tab_footnote(
+    footnote = "Pattern 3 (key-value) is the only pattern not covered by \
+    R4DS Ch. 23. KV = Key-Value struct array.",
+    locations = cells_column_labels(columns = `Pipeline`)
+  ) |>
+  cols_width(`Pipeline` ~ px(380)) |>
+  opt_stylize(style = 1)
+```
+
+------------------------------------------------------------------------
+
+# Exercises {#exercises}
+
+Work through these exercises to reinforce the concepts from this document. Each exercise is tagged with its relevant pattern and difficulty level.
+
+::: callout-warning
+## Exercise 1 — Pattern 1 · Beginner
+
+**Operating System Market Share**
+
+Using `unnest_wider()` on the `device` struct column, calculate the percentage of sessions from each operating system. Create a bar chart showing the top 8 operating systems.
+
+*Hint*: The field is `device$operating_system`.
+
+```{r}
+#| label: ex1
+#| eval: false
+#| code-fold: true
+#| code-summary: "Show solution"
+
+ga4_raw |>
+  select(user_pseudo_id, event_name, device) |>
+  filter(event_name == "session_start") |>
+  unnest_wider(device, names_sep = "_") |>
+  count(device_operating_system) |>
+  filter(!is.na(device_operating_system)) |>
+  mutate(
+    pct = n / sum(n),
+    device_operating_system = fct_reorder(device_operating_system, n)
+  ) |>
+  slice_max(n, n = 8) |>
+  ggplot(aes(
+    x = device_operating_system,
+    y = pct,
+    fill = device_operating_system
+  )) +
+  geom_col(show.legend = FALSE, width = 0.65) +
+  geom_text(
+    aes(label = percent(pct, accuracy = 0.1)),
+    hjust = -0.15,
+    size = 3.8
+  ) +
+  coord_flip() +
+  scale_y_continuous(labels = percent, expand = expansion(mult = c(0, 0.15))) +
+  scale_fill_brewer(palette = "Set3") +
+  labs(
+    title = "Sessions by Operating System",
+    x = NULL,
+    y = "Share of Sessions"
+  )
+``
+`
+:::
+
+::: {.callout-warning}
+## Exercise 2 — Pattern 2 · Beginner
+
+**Average Items per Transaction**
+
+Using `
+unnest_longer()
+` + `
+unnest_wider()
+` on the `
+items
+` column,
+calculate:
+
+1. The average number of line items per purchase transaction
+2. The average `
+quantity
+` per line item
+3. The top 5 item categories by total revenue
+
+*Hint*: Filter to `
+event_name == "purchase"
+` first. The category field
+is `
+item_category
+`.
+
+`
+``
+{
+  r
+}
+#| label: ex2
+#| eval: false
+#| code-fold: true
+#| code-summary: "Show solution"
+
+items_ex2 <- ga4_raw |>
+  filter(event_name == "purchase") |>
+  select(user_pseudo_id, event_timestamp, items) |>
+  unnest_longer(items) |>
+  unnest_wider(items)
+
+# Q1 & Q2
+items_ex2 |>
+  group_by(user_pseudo_id, event_timestamp) |>
+  summarise(
+    line_items = n(),
+    total_qty = sum(quantity, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  summarise(
+    avg_line_items = mean(line_items),
+    avg_quantity = mean(total_qty)
+  )
+
+# Q3
+items_ex2 |>
+  group_by(item_category) |>
+  summarise(
+    revenue = sum(item_revenue_in_usd, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  filter(!is.na(item_category)) |>
+  slice_max(revenue, n = 5) |>
+  mutate(item_category = fct_reorder(item_category, revenue)) |>
+  ggplot(aes(x = item_category, y = revenue, fill = item_category)) +
+  geom_col(show.legend = FALSE, width = 0.65) +
+  geom_text(
+    aes(label = dollar(revenue, accuracy = 1)),
+    hjust = -0.1,
+    size = 3.8
+  ) +
+  coord_flip() +
+  scale_y_continuous(labels = dollar, expand = expansion(mult = c(0, 0.18))) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Revenue by Item Category (Top 5)",
+    x = NULL,
+    y = "Total Revenue (USD)"
+  )
+`
+`
+`
+:::
+
+::: {.callout-warning}
+## Exercise 3 — Pattern 3 · Intermediate
+
+**Page Depth Analysis**
+
+Extract the `
+page_location
+` and `
+ga_session_id
+` parameters from
+`
+event_params
+`. For each session, count the number of page views. Then
+create a histogram showing the distribution of pages-per-session.
+
+*Questions to answer*:
+
+- What is the median number of pages per session?
+- What percentage of sessions view only a single page (bounce-like behaviour)?
+- Does desktop show higher page depth than mobile?
+
+`
+``
+{
+  r
+}
+#| label: ex3
+#| eval: false
+#| code-fold: true
+#| code-summary: "Show solution"
+
+session_depth <- ga4_master |>
+  filter(
+    event_name == "page_view",
+    !is.na(ga_session_id),
+    !is.na(page_location)
+  ) |>
+  group_by(user_pseudo_id, ga_session_id, device_category) |>
+  summarise(pages_viewed = n(), .groups = "drop")
+
+# Distribution stats
+session_depth |>
+  summarise(
+    median_pages = median(pages_viewed),
+    single_page_pct = mean(pages_viewed == 1),
+    avg_pages = mean(pages_viewed)
+  )
+
+# Histogram
+session_depth |>
+  filter(pages_viewed <= 20) |>
+  ggplot(aes(x = pages_viewed, fill = str_to_title(device_category))) +
+  geom_histogram(binwidth = 1, position = "dodge", colour = "white") +
+  scale_x_continuous(breaks = 1:20) +
+  scale_fill_manual(
+    values = c(
+      "Desktop" = "#4285F4",
+      "Mobile" = "#34A853",
+      "Tablet" = "#FBBC05"
+    )
+  ) +
+  labs(
+    title = "Distribution of Pages Viewed per Session",
+    x = "Pages per Session",
+    y = "Number of Sessions",
+    fill = "Device"
+  )
+``
+`
+:::
+
+::: {.callout-warning}
+## Exercise 4 — All Patterns · Advanced
+
+**Cohort Conversion Analysis**
+
+This exercise combines all three rectangling patterns:
+
+1. Use **Pattern 1** to extract `
+traffic_source_medium
+` and
+   `
+device_category
+`
+2. Use **Pattern 3** to extract `
+ga_session_number
+` from `
+event_params
+`
+   (identifies new vs. returning users)
+3. Identify which users completed a purchase (`
+event_name == "purchase"
+`)
+4. Build a summary table showing **conversion rate** broken down by:
+   - New (session 1) vs. returning (session > 1)
+   - Traffic channel
+   - Device category
+
+*Challenge*: Which new-user + channel combination has the highest conversion
+rate? What does that suggest about marketing strategy?
+
+`
+``
+{
+  r
+}
+#| label: ex4
+#| eval: false
+#| code-fold: true
+#| code-summary: "Show solution"
+
+# Users and their session context
+user_sessions <- ga4_master |>
+  filter(event_name == "session_start") |>
+  mutate(
+    user_type = if_else(
+      as.integer(ga_session_number) == 1,
+      "New User",
+      "Returning User"
+    ),
+    channel = case_when(
+      is.na(traffic_source_medium) |
+        traffic_source_medium == "(none)" ~ "Direct",
+      traffic_source_medium == "organic" ~ "Organic Search",
+      traffic_source_medium %in%
+        c("cpc", "ppc", "paid") ~ "Paid Search",
+      str_detect(traffic_source_medium, "email") ~ "Email",
+      str_detect(traffic_source_medium, "social") ~ "Social",
+      TRUE ~ str_to_title(traffic_source_medium)
+    ),
+    device = str_to_title(device_category)
+  ) |>
+  distinct(user_pseudo_id, user_type, channel, device)
+
+# Users who purchased
+purchasers <- ga4_master |>
+  filter(event_name == "purchase") |>
+  distinct(user_pseudo_id) |>
+  mutate(purchased = TRUE)
+
+# Join and compute conversion rates
+user_sessions |>
+  left_join(purchasers, by = "user_pseudo_id") |>
+  mutate(purchased = replace_na(purchased, FALSE)) |>
+  group_by(user_type, channel, device) |>
+  summarise(
+    users = n(),
+    purchasers = sum(purchased),
+    cvr = purchasers / users,
+    .groups = "drop"
+  ) |>
+  filter(users >= 15) |>
+  arrange(desc(cvr)) |>
+  gt() |>
+  tab_header(
+    title = "Conversion Rate by User Type × Channel × Device",
+    subtitle = "Minimum 15 users per segment"
+  ) |>
+  fmt_number(columns = c(users, purchasers), decimals = 0) |>
+  fmt_percent(columns = cvr, decimals = 1) |>
+  cols_label(
+    user_type = "User Type",
+    channel = "Channel",
+    device = "Device",
+    users = "Users",
+    purchasers = "Purchasers",
+    cvr = "CVR"
+  ) |>
+  data_color(
+    columns = cvr,
+    method = "numeric",
+    palette = c("#ffffff", "#43a04720")
+  ) |>
+  opt_stylize(style = 1)
+`
+`
+`
+:::
+
+::: {.callout-warning}
+## Exercise 5 — Pattern 3 · Challenge
+
+**Build Your Own Reusable Pipeline Function**
+
+The `
+flatten_ga4_params()
+` helper introduced in Part 2 has a fragile
+`
+tryCatch
+` block to handle different `
+bigrquery
+` output formats. Rewrite
+it as a robust, well-documented function that:
+
+1. Accepts any GA4 data frame and any key-value list-column name
+2. Detects whether the `
+value
+` struct has already been expanded by
+   checking column names
+3. Handles NULL or zero-row list elements gracefully using
+   `
+purrr::compact()
+`
+4. Returns a wide tibble joined back to the original data (not just the
+   params in isolation)
+5. Includes input validation with informative error messages using
+   `
+rlang::abort()
+`
+
+*Test it on both `
+event_params
+` and `
+user_properties
+`.*
+:::
+
+---
+
+# Summary {#summary}
+
+## What We Covered
+
+This document extended R4DS Chapter 23 in two important directions:
+
+### From R4DS (Applied to GA4)
+
+| Tool | GA4 Use Case |
+|------|-------------|
+| `
+unnest_wider()
+` | Flatten `
+device
+`, `
+geo
+`, `
+traffic_source
+`, `
+ecommerce
+` struct columns |
+| `
+unnest_longer()
+` | Expand `
+items
+` array and first-stage expansion of `
+event_params
+` |
+| `
+hoist()
+` | Fast targeted extraction of specific struct fields |
+| Both combined | Fully rectangling the `
+items
+` repeated struct array |
+
+### Beyond R4DS (GA4-Specific)
+
+| Problem | Solution |
+|---------|---------|
+| Key-value struct arrays (`
+event_params
+`) | 3-stage pipeline: `
+unnest_longer()
+` → `
+unnest_wider()
+` ×2 → `
+coalesce()
+` → `
+pivot_wider()
+` |
+| Union-type value structs | `
+dplyr::coalesce()
+` across the four typed value columns |
+| BigQuery INT64 types | `
+bigint = "numeric"
+` in `
+bq_table_download()
+` |
+| Scale/performance | Download once → cache as `
+.rds
+` → load locally |
+
+## The Three Patterns at a Glance
+
+`
+``
+{
+  r
+}
+#| label: final-summary-diagram
+#| echo: false
+
+tibble::tribble(
+  ~Step , ~Function         , ~`Input Shape`               , ~`Output Shape`             ,
+  "1a"  , "unnest_wider()"  , "list of named lists"        , "new atomic columns"        ,
+  "1b"  , "hoist()"         , "list of named lists"        , "selected atomic columns"   ,
+  "2"   , "unnest_longer()" , "list of tibbles (array)"    , "one row per array element" ,
+  "3a"  , "unnest_wider()"  , "one tibble-row per element" , "named columns per field"   ,
+  "3b"  , "coalesce()"      , "multiple typed value cols"  , "one unified value column"  ,
+  "3c"  , "pivot_wider()"   , "long key-value rows"        , "one column per key"
+) |>
+  gt() |>
+  tab_header(
+    title = "Rectangling Function Reference",
+    subtitle = "Steps 1a–1b cover R4DS Ch. 23 · Steps 3b–3c supplement it for GA4"
+  ) |>
+  tab_style(
+    style = list(cell_fill(color = "#e8f5e9"), cell_text(weight = "bold")),
+    locations = cells_body(rows = Step %in% c("1a", "1b"))
+  ) |>
+  tab_style(
+    style = list(cell_fill(color = "#e3f2fd"), cell_text(weight = "bold")),
+    locations = cells_body(rows = Step == "2")
+  ) |>
+  tab_style(
+    style = list(cell_fill(color = "#fff8e1"), cell_text(weight = "bold")),
+    locations = cells_body(rows = Step %in% c("3a", "3b", "3c"))
+  ) |>
+  cols_width(Step ~ px(50), Function ~ px(160)) |>
+  opt_stylize(style = 1)
+```
+
+## Further Reading
+
+| Resource | Topic |
+|------------------------------------------|------------------------------|
+| [R4DS Ch. 23](https://r4ds.hadley.nz/rectangling.html) | Full rectangling toolkit foundation |
+| [bigrquery docs](https://bigrquery.r-dbi.org/) | BigQuery connection and download options |
+| [GA4 BigQuery schema](https://support.google.com/analytics/answer/7029846) | Official field reference |
+| [tidyr vignette](https://tidyr.tidyverse.org/articles/rectangle.html) | Deep dive into rectangling functions |
+| [purrr cheat sheet](https://rstudio.github.io/cheatsheets/purrr.pdf) | List iteration patterns |
+
+------------------------------------------------------------------------
+
+```{r}
+#| label: session-info
+#| code-fold: true
+#| code-summary: "Session Info (for reproducibility)"
+
+sessioninfo::session_info()
+```
+
+# Reference
+
+-   [R for Data Science, Ch23](https://r4ds.hadley.nz/rectangling.html)
+:::

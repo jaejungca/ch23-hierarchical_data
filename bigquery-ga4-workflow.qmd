@@ -1,0 +1,633 @@
+---
+title: "Recommended GA4 Workflow in R"
+author: "Jae Jung"
+date: "2026-03-08"
+format: 
+    html:
+        theme: cosmo
+        toc: true
+        toc-depth: 3
+        toc-location: right-body
+        embed-resources: true
+execute:
+    freeze: auto
+---
+
+``` ai
+You are a helpful technical assistant specializing in data analysis with R. A user needs help with analyzing Google Analytics 4 (GA4) data from BigQuery using R in the Positron IDE.
+
+Here are the environment details (if provided):
+<environment_details>
+{{ENVIRONMENT_DETAILS}}
+</environment_details>
+
+Here is the user's question:
+<question>
+{{QUESTION}}
+</question>
+
+Before providing your answer, use the scratchpad below to think through the key aspects of the user's needs:
+
+<scratchpad>
+Consider:
+- What is GA4 data and why is it nested?
+- What are the user's constraints (using R, Positron IDE, avoiding SQL)?
+- What R packages are best suited for querying BigQuery?
+- What R packages/methods handle nested/list-column data effectively?
+- What practical workflow would be most efficient?
+</scratchpad>
+
+Now provide a comprehensive answer that includes:
+
+1. **R packages for BigQuery access**: Recommend specific packages for connecting to and querying BigQuery from R
+2. **Packages for handling nested data**: Suggest R packages and approaches for working with nested/hierarchical data structures (like tidyr, purrr, jsonlite, etc.)
+3. **Practical workflow**: Explain how to combine these tools effectively
+4. **Code examples**: Where helpful, provide brief code snippets or patterns to illustrate the approach
+5. **Best practices**: Include any tips for working efficiently with GA4's specific nested structure
+
+Make your answer practical and actionable, focusing on solutions that avoid writing raw SQL queries as the user requested.
+
+Write your complete answer inside <answer> tags.
+```
+
+# GA4 Workflow for Minizing Query Cost
+
+### 1. 💾 **Cache Data Locally (Most Important!)**
+
+Since you're already familiar with DuckDB and Arrow, this is your best strategy:
+
+```{r}
+library(bigrquery)
+library(dplyr)
+library(arrow)
+
+# Pull data ONCE from BigQuery
+bq_project <- "your-project-id"
+bq_dataset <- "analytics_XXXXXXXXX" # your GA4 dataset
+
+# Query and download
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = bq_project,
+  dataset = bq_dataset
+)
+
+# Pull a date range once
+raw_data <- tbl(con, "events_20240101") |>
+  collect() # downloads to local R memory
+
+# Save locally as Parquet (efficient, compressed)
+write_parquet(raw_data, "data/ga4_events_20240101.parquet")
+
+# Future sessions: read locally for FREE
+ga4_local <- read_parquet("data/ga4_events_20240101.parquet")
+```
+
+### 2. 🦆 **Use DuckDB on Local Parquet Files**
+
+Once cached locally, use DuckDB for fast, free querying:
+
+```{r}
+library(duckdb)
+library(dplyr)
+
+con_duck <- dbConnect(duckdb())
+
+# Query your local parquet files — completely free!
+tbl(con_duck, "read_parquet('data/ga4_events_*.parquet')") |>
+  filter(event_name == "page_view") |>
+  count(event_name)
+```
+
+### 3. 📅 **Query Only the Date Partitions You Need**
+
+GA4 BigQuery tables are **date-partitioned** (e.g., `events_20240101`). Query specific dates rather than the full dataset:
+
+```{r}
+# ✅ CHEAPER: Query specific date partition
+tbl(con, "events_20240101")
+
+# ❌ MORE EXPENSIVE: Querying across all dates
+# SELECT * FROM `events_*`  -- scans everything!
+```
+
+### 4. 🔍 **Select Only Columns You Need**
+
+BigQuery charges by data scanned, so selecting fewer columns = lower cost:
+
+```{r}
+# ✅ Cheaper - only pull what you need
+tbl(con, "events_20240101") |>
+  select(event_name, event_timestamp, user_pseudo_id) |>
+  collect()
+
+# ❌ More expensive
+tbl(con, "events_20240101") |>
+  collect() # pulls all nested columns including heavy event_params
+```
+
+### 5. 🧪 **Preview Costs Before Running Queries**
+
+Use the BigQuery console or `bq_perform_query()` with dry run to estimate costs:
+
+```{r}
+# Check estimated bytes before running
+bq_dataset_query(
+  bq_dataset(bq_project, bq_dataset),
+  query = "SELECT * FROM events_20240101 LIMIT 10",
+  dryRun = TRUE # estimates cost without charging you
+)
+```
+
+## Summary
+
+Recommended Workflow for Your Setup
+
+```         
+BigQuery (GA4 source)
+      ↓  [Pull ONCE with bigrquery]
+Local Parquet files (Arrow format)
+      ↓  [Query freely with DuckDB]
+Analysis in Quarto/R (Positron)
+```
+
+## Quick Cost Estimation
+
+Quick Cost Estimation
+
+| Action                                | Approx Cost                   |
+|---------------------------------------|-------------------------------|
+| Query 1 day of GA4 events (\~500MB)   | \~\$0.0025 (essentially free) |
+| Query 1 year of GA4 events (\~180GB)  | \~\$0.90                      |
+| Query 1 year, all columns, large site | Could be \$5–\$50+            |
+| Reading local Parquet in DuckDB       | **\$0.00**                    |
+
+# Analyzing GA4 BigQuery Data in R with Positron IDE
+
+## Understanding the Challenge
+
+GA4 data in BigQuery is notoriously complex. Each row represents a single user session/event, but fields like `event_params`, `user_properties`, and `items` are stored as **repeated RECORD types** — essentially arrays of key-value structs nested inside each row. This makes it feel intimidating, but R has excellent tools for flattening and wrangling this structure without writing raw SQL.
+
+## 1. R Packages for BigQuery Access
+
+### Primary Recommendation: `{bigrquery}` + `{dbplyr}`
+
+This combination is the most idiomatic R approach and lets you write **dplyr verbs instead of SQL**.
+
+```{r}
+#| eval = false
+install.packages(c("bigrquery", "dbplyr", "DBI", "dplyr"))
+```
+
+| Package     | Role                                              |
+|-------------|---------------------------------------------------|
+| `bigrquery` | Handles BigQuery authentication and connection    |
+| `DBI`       | Provides the standard database interface layer    |
+| `dbplyr`    | Translates dplyr verbs into SQL behind the scenes |
+
+### Alternative: `{googleCloudStorageR}` + `{gargle}`
+
+For more complex authentication scenarios (e.g., service accounts in CI/CD pipelines), `{gargle}` handles OAuth2 and service account credentials cleanly and integrates with `{bigrquery}` automatically.
+
+```{r}
+#| eval = false
+install.packages(c("gargle", "googleCloudStorageR"))
+```
+
+## 2. Setting Up Your Connection
+
+### Authentication
+
+```{r}
+#| eval = false
+library(bigrquery)
+library(DBI)
+library(dplyr)
+
+# Option A: Interactive OAuth (simplest for local development in Positron)
+# bigrquery will open a browser window automatically on first run
+bq_auth()
+
+# Option B: Service account key file (better for reproducible/shared work)
+bq_auth(path = "path/to/your/service-account-key.json")
+
+# Option C: Use Application Default Credentials (ADC) - great for GCP environments
+# Run in terminal first: gcloud auth application-default login
+bq_auth(use_oob = TRUE) # Use this in Positron if browser redirect fails
+```
+
+::: callout-tip
+**Positron-specific tip**: If the OAuth browser redirect fails in Positron's integrated terminal, set `use_oob = TRUE` in `bq_auth()` to get a copyable URL instead of an auto-redirect.
+:::
+
+### Establishing the Connection
+
+```{r}
+#| eval = false
+# Replace with your actual project/dataset details
+PROJECT_ID <- "your-gcp-project-id"
+DATASET <- "analytics_XXXXXXXXX" # Your GA4 dataset ID from BigQuery
+
+con <- dbConnect(
+  bigrquery::bigquery(),
+  project = PROJECT_ID,
+  dataset = DATASET,
+  billing = PROJECT_ID # Project that gets billed for the query
+)
+
+# Confirm the connection works by listing available tables
+dbListTables(con)
+# You'll see tables like: "events_20240101", "events_20240102", etc.
+
+```
+
+## 3. Accessing GA4 Tables with dplyr (No SQL Required)
+
+GA4 creates one table per day (`events_YYYYMMDD`). Use `dplyr::tbl()` to create a lazy reference:
+
+```{r}
+# Point to a specific day's table
+events_tbl <- tbl(con, "events_20240115")
+
+# Or use a wildcard to span date ranges via a SQL table name trick
+# This is the ONE place a small SQL string is unavoidable with bigrquery
+events_range <- tbl(
+  con,
+  dbplyr::sql(
+    "SELECT * FROM `your-project.analytics_XXXXXXXXX.events_20240101`"
+  )
+)
+```
+
+Better Date Range Approach Using `bq_table_download()`
+
+```{r}
+#| eval = false
+library(bigrquery)
+
+# Query multiple days using bq_project_query for more control
+query_result <- bq_project_query(
+  PROJECT_ID,
+  query = glue::glue(
+    "
+    SELECT *
+    FROM `{PROJECT_ID}.{DATASET}.events_*`
+    WHERE _TABLE_SUFFIX BETWEEN '20240101' AND '20240131'
+    LIMIT 10000
+  "
+  )
+)
+
+# Download results as a tibble
+raw_data <- bq_table_download(query_result, bigint = "integer64")
+```
+
+::: callout-note
+Even this minimal SQL is just for table selection — all the actual data transformation happens in R afterward.
+:::
+
+## 4. Packages for Handling GA4's Nested Data
+
+Once data is pulled into R, the nested columns (`event_params`, `user_properties`, `items`) will appear as **list-columns** — columns where each cell contains a tibble or list. Here's your toolkit:
+
+### Core Packages
+
+```{r}
+# install.packages(c("tidyr", "purrr", "tibble", "dplyr", "glue"))
+```
+
+| Package | Key Function(s) | Use Case |
+|------------------------|------------------------|------------------------|
+| `tidyr` | `unnest()`, `unnest_wider()`, `unnest_longer()`, `hoist()` | Flattening nested list-columns |
+| `purrr` | `map()`, `map_df()`, `pluck()`, `keep()` | Iterating over list elements |
+| `tibble` | `tibble()`, `enframe()` | Working with list-columns |
+| `jsonlite` | `fromJSON()`, `flatten()` | If data arrives as JSON strings |
+
+## 5. Practical Workflow: Unnesting GA4 Data
+
+### What the Raw Data Looks Like
+
+When you download GA4 data, `event_params` looks like this in R:
+
+```         
+# A tibble: 3 × 3
+  event_name      event_params
+  <chr>           <list>
+1 page_view       <tibble [8 × 4]>
+2 scroll          <tibble [5 × 4]>
+3 click           <tibble [6 × 4]>
+```
+
+Each cell in `event_params` is itself a tibble with columns like:
+
+-   `key` (parameter name, e.g., `"page_location"`, `"session_id"`)
+
+-   `value.string_value`
+
+-   `value.int_value`
+
+-   `value.float_value`
+
+-   `value.double_value`
+
+### Step-by-Step Unnesting Workflow
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(purrr)
+
+# ── Step 1: Pull a manageable sample from BigQuery ───────────────────────────
+raw_data <- bq_project_query(
+  PROJECT_ID,
+  query = glue::glue(
+    "
+    SELECT
+      event_date,
+      event_timestamp,
+      event_name,
+      event_params,
+      user_pseudo_id,
+      user_properties,
+      device,
+      geo
+    FROM `{PROJECT_ID}.{DATASET}.events_*`
+    WHERE _TABLE_SUFFIX = '20240115'
+      AND event_name IN ('page_view', 'purchase', 'add_to_cart')
+  "
+  )
+) |>
+  bq_table_download()
+
+# ── Step 2: Unnest event_params into long format ─────────────────────────────
+params_long <- raw_data |>
+  select(event_date, event_name, user_pseudo_id, event_params) |>
+  unnest(event_params) # Expands list-column into rows
+
+# Result: one row per parameter per event
+# Columns: event_date, event_name, user_pseudo_id, key,
+#          value.string_value, value.int_value, etc.
+
+# ── Step 3: Consolidate the value columns into one ───────────────────────────
+params_clean <- params_long |>
+  mutate(
+    value = coalesce(
+      value.string_value,
+      as.character(value.int_value),
+      as.character(value.float_value),
+      as.character(value.double_value)
+    )
+  ) |>
+  select(event_date, event_name, user_pseudo_id, key, value)
+
+# ── Step 4: Pivot to wide format (one column per parameter) ──────────────────
+params_wide <- params_clean |>
+  pivot_wider(
+    names_from = key,
+    values_from = value,
+    values_fn = first # Handle duplicates by taking first value
+  )
+
+# Now you have clean columns like: page_location, session_id, ga_session_number
+head(params_wide)
+```
+
+### Extracting Specific Parameters with `hoist()` (More Efficient)
+
+If you only need a few specific parameters, `tidyr::hoist()` is faster than full unnesting because it avoids expanding everything:
+
+```{r}
+# Extract only the parameters you need without full unnest
+targeted_data <- raw_data |>
+  hoist(
+    event_params,
+    page_location = list("key" == "page_location", "value", "string_value"),
+    session_id = list("key" == "ga_session_id", "value", "int_value"),
+    engagement_time = list(
+      "key" == "engagement_time_msec",
+      "value",
+      "int_value"
+    )
+  )
+```
+
+> **Note**: `hoist()` with named list conditions works in recent versions of `tidyr`. For older versions, use a `purrr::map()` approach shown below.
+
+### The `purrr` Approach for Custom Extraction
+
+This is more verbose but gives you maximum control:
+
+```{r}
+# Helper function to extract a specific param value from the nested list
+extract_param <- function(params_list, param_key) {
+  purrr::map_chr(params_list, function(params) {
+    # params is a tibble with key/value columns
+    match_row <- params[params$key == param_key, ]
+
+    if (nrow(match_row) == 0) {
+      return(NA_character_)
+    }
+
+    # Return whichever value type is populated
+    coalesce(
+      match_row$value.string_value,
+      as.character(match_row$value.int_value),
+      as.character(match_row$value.float_value)
+    )[1]
+  })
+}
+
+# Apply to your dataframe
+enriched_data <- raw_data |>
+  mutate(
+    page_location = extract_param(event_params, "page_location"),
+    session_id = extract_param(event_params, "ga_session_id"),
+    page_referrer = extract_param(event_params, "page_referrer")
+  ) |>
+  select(-event_params) # Drop the now-redundant list column
+```
+
+## 6. Handling Other Nested Structures
+
+### Device and Geo (Struct columns — easier!)
+
+These are nested structs, not repeated records, so they unnest cleanly:
+
+```{r}
+device_data <- raw_data |>
+  unnest_wider(device, names_sep = "_") |> # Creates device_category, device_browser, etc.
+  unnest_wider(geo, names_sep = "_") # Creates geo_country, geo_city, etc.
+```
+
+### User Properties
+
+Same pattern as `event_params`:
+
+```{r}
+user_props <- raw_data |>
+  select(user_pseudo_id, user_properties) |>
+  unnest(user_properties) |>
+  mutate(value = coalesce(value.string_value, as.character(value.int_value))) |>
+  select(user_pseudo_id, key, value) |>
+  pivot_wider(names_from = key, values_from = value, values_fn = first)
+```
+
+### E-commerce Items Array
+
+```{r}
+purchase_items <- raw_data |>
+  filter(event_name == "purchase") |>
+  select(user_pseudo_id, event_timestamp, items) |>
+  unnest(items) |> # One row per item per purchase
+  unnest_wider(item_params) # Expand any nested item params
+```
+
+## 7. Complete End-to-End Example
+
+Here's a realistic workflow for a common GA4 analysis — **page view analysis by device**:
+
+```{r}
+library(bigrquery)
+library(DBI)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(glue)
+library(lubridate)
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+PROJECT_ID <- "your-project-id"
+DATASET <- "analytics_XXXXXXXXX"
+bq_auth()
+
+# ── Pull page view events ─────────────────────────────────────────────────────
+raw <- bq_project_query(
+  PROJECT_ID,
+  glue(
+    "
+    SELECT
+      event_date,
+      event_name,
+      user_pseudo_id,
+      event_params,
+      device.category    AS device_category,
+      device.browser     AS browser,
+      geo.country        AS country
+    FROM `{PROJECT_ID}.{DATASET}.events_*`
+    WHERE _TABLE_SUFFIX BETWEEN '20240101' AND '20240131'
+      AND event_name = 'page_view'
+  "
+  )
+) |>
+  bq_table_download()
+
+# ── Extract page location from nested params ───────────────────────────────────
+page_views <- raw |>
+  mutate(
+    # Use purrr to safely extract the page_location parameter
+    page_location = map_chr(event_params, function(p) {
+      val <- p$value.string_value[p$key == "page_location"]
+      if (length(val) == 0) NA_character_ else val[1]
+    }),
+    event_date = ymd(event_date)
+  ) |>
+  select(-event_params) |> # Clean up
+  filter(!is.na(page_location)) |>
+  mutate(
+    # Parse path from full URL
+    page_path = gsub("https?://[^/]+", "", page_location),
+    page_path = gsub("\\?.*", "", page_path) # Remove query strings
+  )
+
+# ── Analyze ────────────────────────────────────────────────────────────────────
+# Top pages by device
+top_pages_by_device <- page_views |>
+  count(device_category, page_path, sort = TRUE) |>
+  group_by(device_category) |>
+  slice_max(n, n = 10) |>
+  ungroup()
+
+# Daily trend
+daily_trend <- page_views |>
+  count(event_date, device_category) |>
+  arrange(event_date)
+
+print(top_pages_by_device)
+print(daily_trend)
+```
+
+## 8. Best Practices & Pro Tips
+
+### Performance
+
+-   **Always filter in the query first**: Pull only the event types, date ranges, and columns you need. GA4 tables can be enormous.
+
+-   **Use `LIMIT` during development**: Add `LIMIT 1000` while building your pipeline, remove it for final runs.
+
+-   **Cache downloaded data locally**: Save intermediate results with `readr::write_rds()` to avoid re-querying BigQuery during development.
+
+```{r}
+# Cache pattern
+cache_file <- "data/raw_ga4_jan2024.rds"
+
+if (!file.exists(cache_file)) {
+  raw_data <- bq_project_query(...) |> bq_table_download()
+  readr::write_rds(raw_data, cache_file, compress = "gz")
+} else {
+  raw_data <- readr::read_rds(cache_file)
+}
+```
+
+### Working in Positron
+
+-   Use Positron's **Variables pane** to inspect list-column structure interactively — click on a cell to see the nested tibble without printing to console.
+
+-   The **integrated data viewer** handles tibbles with list-columns better than RStudio in many cases.
+
+-   Create a dedicated **R Project** with a `renv.lock` file to pin package versions, especially `bigrquery` (it updates frequently).
+
+```{r}
+# Set up reproducible environment
+install.packages("renv")
+renv::init()
+renv::snapshot() # After installing your packages
+```
+
+### GA4-Specific Tips
+
+| Tip | Detail |
+|----------------------|--------------------------------------------------|
+| **`user_pseudo_id` ≠ user** | It resets if cookies are cleared; use with caution for user counts |
+| **Deduplicate events** | GA4 can have duplicate events; use `distinct()` on `event_timestamp + user_pseudo_id + event_name` |
+| **Timezone awareness** | `event_timestamp` is in microseconds UTC; convert with `as.POSIXct(event_timestamp / 1e6, origin = "1970-01-01", tz = "America/New_York")` |
+| **Intraday tables** | Same-day data is in `events_intraday_YYYYMMDD` — query separately if you need today's data |
+
+### Debugging Nested Columns
+
+```{r}
+# Peek inside a list-column without unnesting everything
+raw_data$event_params[[1]] # View the tibble for the first row
+raw_data$event_params[[1]] |> View() # Open in Positron's data viewer
+
+# Check what keys exist across all events
+raw_data |>
+  unnest(event_params) |>
+  count(key, sort = TRUE) # Inventory of all parameter names
+```
+
+### Quick Reference Card
+
+```         
+BigQuery Connection:    bigrquery + DBI + dbplyr
+Authentication:         bq_auth() / service account JSON
+Download data:          bq_table_download()
+Unnest repeated RECORD: tidyr::unnest() → pivot_wider()
+Unnest struct columns:  tidyr::unnest_wider(col, names_sep="_")
+Selective extraction:   purrr::map_chr() with custom helper
+Consolidate values:     dplyr::coalesce(str_val, as.character(int_val), ...)
+Cache results:          readr::write_rds() / read_rds()
+```
+
+::: callout-note
+This workflow keeps you almost entirely in the tidyverse, with BigQuery handling only the initial data retrieval — exactly the right division of labor for an R-focused analysis workflow.
+:::
