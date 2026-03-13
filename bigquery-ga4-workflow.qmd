@@ -1,7 +1,8 @@
 ---
-title: "Recommended GA4 Workflow in R"
+title: "Recommended GA4 Workflow Guideline in R"
+subtitle: "Incorporating Ch21, Ch22, and Ch23"
 author: "Jae Jung"
-date: "2026-03-08"
+date: "2026-03-11"
 format: 
     html:
         theme: cosmo
@@ -15,7 +16,7 @@ execute:
 
 # GA4 Workflow for Minizing Query Cost
 
-### 1. 💾 **Cache Data Locally (Most Important!)**
+### 1. **Cache Data Locally (Most Important!)**
 
 Since you're already familiar with DuckDB and Arrow, this is your best strategy:
 
@@ -46,7 +47,7 @@ write_parquet(raw_data, "data/ga4_events_20240101.parquet")
 ga4_local <- read_parquet("data/ga4_events_20240101.parquet")
 ```
 
-### 2. 🦆 **Use DuckDB on Local Parquet Files**
+### 2. **Use DuckDB on Local Parquet Files**
 
 Once cached locally, use DuckDB for fast, free querying:
 
@@ -62,7 +63,7 @@ tbl(con_duck, "read_parquet('data/ga4_events_*.parquet')") |>
   count(event_name)
 ```
 
-### 3. 📅 **Query Only the Date Partitions You Need**
+### 3. **Query Only the Date Partitions You Need**
 
 GA4 BigQuery tables are **date-partitioned** (e.g., `events_20240101`). Query specific dates rather than the full dataset:
 
@@ -74,7 +75,7 @@ tbl(con, "events_20240101")
 # SELECT * FROM `events_*`  -- scans everything!
 ```
 
-### 4. 🔍 **Select Only Columns You Need**
+### 4. **Select Only Columns You Need**
 
 BigQuery charges by data scanned, so selecting fewer columns = lower cost:
 
@@ -89,7 +90,7 @@ tbl(con, "events_20240101") |>
   collect() # pulls all nested columns including heavy event_params
 ```
 
-### 5. 🧪 **Preview Costs Before Running Queries**
+### 5. **Preview Costs Before Running Queries**
 
 Use the BigQuery console or `bq_perform_query()` with dry run to estimate costs:
 
@@ -559,7 +560,7 @@ renv::snapshot() # After installing your packages
 ### GA4-Specific Tips
 
 | Tip | Detail |
-|----------------------|--------------------------------------------------|
+|-----------------------|-------------------------------------------------|
 | **`user_pseudo_id` ≠ user** | It resets if cookies are cleared; use with caution for user counts |
 | **Deduplicate events** | GA4 can have duplicate events; use `distinct()` on `event_timestamp + user_pseudo_id + event_name` |
 | **Timezone awareness** | `event_timestamp` is in microseconds UTC; convert with `as.POSIXct(event_timestamp / 1e6, origin = "1970-01-01", tz = "America/New_York")` |
