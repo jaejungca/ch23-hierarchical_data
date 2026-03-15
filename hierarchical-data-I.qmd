@@ -1,8 +1,8 @@
 ---
-title: "Rectangling Hierarchical Data"
+title: "Rectangling Hierarchical Data: Part I"
 subtitle: "R4DS Chapter 23 Concepts Applied to Google Analytics 4 in BigQuery"
 author: "Jae Jung"
-date: "March 8, 2026"
+date: today
 format:
   html:
     theme:
@@ -10,7 +10,7 @@ format:
       dark: darkly
     toc: true
     toc-depth: 3
-    toc-location: left
+    toc-location: left-body
     toc-title: "Contents"
     toc-expand: true
     code-fold: show
@@ -23,12 +23,13 @@ format:
     df-print: paged
     number-sections: true
     smooth-scroll: true
-    embed-resources: true
+    #embed-resources: true
     callout-appearance: minimal
 execute:
   warning: false
   message: false
   cache: true
+  freeze: auto
 ---
 
 ```{r}
@@ -48,6 +49,7 @@ library(gt) # Publication-quality tables
 library(glue) # String interpolation
 library(forcats) # Factor reordering for plots
 library(tidyverse)
+library(arrow)
 
 # Consistent ggplot2 theme for all charts
 theme_set(
@@ -89,7 +91,7 @@ By the end of this workshop you will be able to:
 Google provides a **free public GA4 dataset** in BigQuery derived from their own online store ([merch.google.com](https://merch.google.com)). The data covers real shopping behaviour — page views, product interactions, and purchases — but user identifiers have been obfuscated for privacy.
 
 | Detail | Value |
-|--------------------|----------------------------------------------------|
+|------------------------|------------------------------------------------|
 | BigQuery path | `bigquery-public-data.ga4_obfuscated_sample_ecommerce` |
 | Date range | November 2020 – January 2021 |
 | Table format | One table per day: `events_YYYYMMDD` |
@@ -225,7 +227,7 @@ con <- dbConnect(
 dbListTables(con)
 ```
 
-###  My Own BigQuery Account: Do not use this
+### My Own BigQuery Account: Do not use this
 
 ```{r}
 #| echo: false
@@ -272,6 +274,7 @@ query_result <- bq_project_query(
    WHERE _TABLE_SUFFIX BETWEEN '20210101' AND '20210107'"
 )
 
+# A tibble data
 ga4_raw <- query_result |>
   bq_table_download(
     bigint = "numeric", # Convert INT64 to R numeric (sufficient for most analyses)
@@ -286,10 +289,11 @@ message("Saved ", nrow(ga4_raw), " rows to data/ga4_raw.rds")
 
 ```{r}
 #| label: load-data
-#| cache: false
+#| cache: true
+#| eval: true
 
 # ── Load from local cache (use this for all subsequent analyses) ──────────────
-ga4_raw <- readRDS("data/ga4_raw.rds")
+ga4 <- readRDS("data/ga4_raw.rds")
 ```
 
 ------------------------------------------------------------------------
@@ -304,10 +308,14 @@ Before rectangling anything, let us understand what we are dealing with.
 #| label: first-glimpse
 
 # Overall structure
-glimpse(ga4_raw)
+glimpse(ga4)
 ```
 
-> Notice that several columns show `<list>` as their type. These are **list-columns** — R's representation of BigQuery's nested fields. Each cell in a list-column contains a complex R object (a list, a tibble, or a named vector) rather than a single atomic value.
+::: callout-note
+-   Notice that several columns show `<list>` as their type. These are **list-columns** — R's representation of BigQuery's nested fields.
+
+-   Each cell in a list-column contains a complex R object (a list, a tibble, or a named vector) rather than a single atomic value.
+:::
 
 ## Inspecting Individual List-Columns
 
@@ -318,7 +326,7 @@ Let us look inside each type of nested column:
 #| code-summary: "Inspect the device struct column"
 
 # device is a STRUCT — each cell is a named list
-ga4_raw$device[[1]] # Look at the first row's device record
+ga4$device[[1]] # Look at the first row's device record
 ```
 
 ```{r}
@@ -327,8 +335,8 @@ ga4_raw$device[[1]] # Look at the first row's device record
 
 # items is an ARRAY of STRUCTs — each cell is a tibble (may be empty for non-purchase events)
 # Find a row that has items (a purchase event)
-purchase_rows <- which(ga4_raw$event_name == "purchase")
-ga4_raw$items[[purchase_rows[1]]] # First purchase event's items
+purchase_rows <- which(ga4$event_name == "purchase")
+ga4$items[[purchase_rows[1]]] # First purchase event's items
 ```
 
 ```{r}
@@ -337,8 +345,8 @@ ga4_raw$items[[purchase_rows[1]]] # First purchase event's items
 
 # event_params is an ARRAY of KEY-VALUE STRUCTs
 # Each cell is a tibble with columns: key, value (and value sub-columns)
-page_view_rows <- which(ga4_raw$event_name == "page_view")
-ga4_raw$event_params[[page_view_rows[1]]] # First page_view event's params
+page_view_rows <- which(ga4$event_name == "page_view")
+ga4$event_params[[page_view_rows[1]]] # First page_view event's params
 ```
 
 ::: callout-note
@@ -354,7 +362,7 @@ ga4_raw$event_params[[page_view_rows[1]]] # First page_view event's params
 ```{r}
 #| label: list-column-lengths
 
-ga4_raw |>
+ga4 |>
   mutate(
     n_params = map_int(event_params, nrow),
     n_items = map_int(items, \(x) {
@@ -422,19 +430,21 @@ GA4's `device`, `geo`, and `traffic_source` columns are all **non-repeated RECOR
 ```{r}
 #| label: unnest-device
 
-device_data <- ga4_raw |>
+device_data <- ga4 |>
   select(user_pseudo_id, event_name, event_date, device) |>
   unnest_wider(device) # ← expands named list into columns
 
 glimpse(device_data) # 13 columns unnested
 ```
 
+::: callout-note
 The `device` list-column is replaced by individual columns (13 of them): `category`, `mobile_brand_name`, `browser`, `operating_system`, etc. Each column name matches the original struct field name.
+:::
 
 ::: callout-tip
 ## `names_sep` for Avoiding Name Collisions
 
-When unnesting multiple struct columns that might share field names, use `names_sep` to prefix each new column:
+> When unnesting multiple struct columns that might share field names, use `names_sep` to prefix each new column:
 
 ``` r
 # Prevents collisions if two structs both have, e.g., a "version" field
@@ -449,7 +459,7 @@ ga4_raw |>
 ```{r}
 #| label: unnest-geo
 
-geo_data <- ga4_raw |>
+geo_data <- ga4 |>
   select(user_pseudo_id, event_date, geo) |>
   unnest_wider(geo, names_sep = "_") # → geo_country, geo_city, geo_region
 
@@ -458,12 +468,12 @@ glimpse(geo_data)
 
 ### Unnesting Multiple Structs in One Pipeline
 
-In practice, you usually want to unnest several struct columns at once:
+> In practice, you usually want to unnest several struct columns at once:
 
 ```{r}
 #| label: unnest-multiple-structs
 
-ga4_flat_structs <- ga4_raw |>
+ga4_flat_structs <- ga4 |>
   select(
     event_date,
     event_name,
@@ -1115,7 +1125,19 @@ Flat rectangular tibble         (event_params after)
 This pipeline applies identically to `event_params` and `user_properties`.
 :::
 
-------------------------------------------------------------------------
+
+## Quick reference
+
+| Task | Code |
+|-----------------------|-------------------------------------------------|
+| Start session | `con <- dbConnect(duckdb())` then `CREATE VIEW ga4 AS ...` |
+| Count events | `SELECT event_name, COUNT(*) FROM ga4 GROUP BY 1` |
+| Filter by date | `WHERE event_date BETWEEN '20210101' AND '20210131'` |
+| Unnest event_params | `CROSS JOIN UNNEST(event_params) AS ep(key, value)` |
+| Access nested field | `device.category`, `geo.country` |
+| End session | `dbDisconnect(con)` |
+
+The key principle: **BigQuery is touched once, everything else is local.** DuckDB reads only the Parquet partitions your `WHERE event_date` clause needs, so a one-week query on 3 months of data only scans \~23% of the files.
 
 # Reference
 

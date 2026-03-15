@@ -1,7 +1,7 @@
 ---
 title: "GA4 BigQuery Analysis with Arrow & DuckDB"
-subtitle: "Efficient large-scale analytics in R using Positron"
-author: "Your Name"
+subtitle: "Demonstration of Efficient large-scale analytics in R using Positron"
+author: "Jae Jung"
 date: today
 format:
   html:
@@ -11,10 +11,12 @@ format:
     code-tools: true
     theme: cosmo
     highlight-style: github
+    embed-resources: true
 execute:
+  echo: fenced
   warning: false
   message: false
-  cache: true  # Cache chunks to avoid re-running expensive queries
+  cache: false  # Cache chunks to avoid re-running expensive queries
 ---
 
 # Setup
@@ -27,15 +29,15 @@ execute:
 
 # Run once to install required packages
 install.packages(c(
-  "bigrquery",    # BigQuery connector
-  "DBI",          # Database Interface
-  "dplyr",        # Data manipulation
-  "arrow",        # Apache Arrow (columnar, efficient)
-  "duckdb",       # In-process OLAP SQL engine
-  "ggplot2",      # Plotting
-  "lubridate",    # Date handling
-  "scales",       # Axis formatting
-  "glue"          # String interpolation
+  "bigrquery", # BigQuery connector
+  "DBI", # Database Interface
+  "dplyr", # Data manipulation
+  "arrow", # Apache Arrow (columnar, efficient)
+  "duckdb", # In-process OLAP SQL engine
+  "ggplot2", # Plotting
+  "lubridate", # Date handling
+  "scales", # Axis formatting
+  "glue" # String interpolation
 ))
 ```
 
@@ -59,11 +61,10 @@ GA4 exports data to BigQuery in sharded daily tables named `events_YYYYMMDD`. Th
 ```{r}
 #| label: bigquery-connection
 
-
 # ── Configuration ────────────────────────────────────────────────────────────
-GCP_PROJECT  <- "ga4-bigquery-cppmsdm"          # <-- change this 
-BQ_PROJECT   <- "bigquery-public-data"
-BQ_DATASET   <- "ga4_obfuscated_sample_ecommerce"
+GCP_PROJECT <- "ga4-bigquery-cppmsdm" # <-- change this
+BQ_PROJECT <- "bigquery-public-data"
+BQ_DATASET <- "ga4_obfuscated_sample_ecommerce"
 
 # Authenticate (opens browser on first run; token cached in ~/.cache/gargle)
 # bq_auth()                          # uncomment if not yet authed
@@ -79,7 +80,7 @@ bq_con <- dbConnect(
 )
 
 # Confirm tables are visible
-dbListTables(bq_con) |> head(10)
+dbListTables(bq_con)
 ```
 
 ------------------------------------------------------------------------
@@ -101,24 +102,25 @@ Rather than pulling everything into memory, we:
 #date_end   <- Sys.Date() - 1                         # yesterday
 #date_start <- date_end - 89                          # 90 days back
 
-date_end <- as.Date("2021-01-07")
+date_end <- as.Date("2021-01-31")
 date_start <- as.Date("2021-01-01")
 
 # Format as YYYYMMDD for BQ table suffix pattern
 bq_start <- format(date_start, "%Y%m%d")
-bq_end   <- format(date_end,   "%Y%m%d")
+bq_end <- format(date_end, "%Y%m%d")
 
 ```
 
 ## 2b. BigQuery SQL — flatten GA4 nested structs
 
-GA4 data is heavily nested (events → event_params, items, etc.). We unnest the key fields we need in SQL before pulling.
+> GA4 data is heavily nested (events → event_params, items, etc.). We unnest the key fields we need in SQL before pulling.
 
 ```{r}
 #| label: bq-sql
 library(glue)
 
-sql <- glue("
+sql <- glue(
+  "
   SELECT
     -- Session / user dims
     PARSE_DATE('%Y%m%d', event_date) AS event_date,
@@ -153,7 +155,8 @@ sql <- glue("
       'session_start', 'page_view',
       'view_item', 'add_to_cart', 'purchase'
     )
-")
+"
+)
 
 cat(sql)
 ```
@@ -162,40 +165,49 @@ cat(sql)
 
 ```{r}
 #| label: fetch-arrow
-#| cache: false
+#| eval: false
+#| cache: true
 
 # Execute the query; stream results into an Arrow Table
-# arrow::read_ipc_stream handles memory efficiently
+# arrow::read_ipc_stream() handles memory efficiently
 result <- DBI::dbGetQuery(bq_con, sql)
 ```
 
+::: callout-warning
 > Unfortunately, this code above led to the following error when executed.
 
-```
-Billed: 73.40 MB
+```         
+Billed: 362.81 MB
 Downloading first chunk of data.
-Downloading the remaining 119,972 rows in 12 chunks of (up to) 10,000 rows.
+Downloading the remaining 629,250 rows in 63 chunks of (up to) 10,000 rows.
                                                               
 Warning messages:
 1: In as.integer.integer64(x) : NAs produced by integer overflow
 2: In as.integer.integer64(x) : NAs produced by integer overflow
 ```
+
 > Fixing the problem with requring with the following way.
+:::
 
 ```{r}
 # use bigrquery functions to control bigint conversion
-tbl <- bigrquery::bq_project_query(GCP_PROJECT, sql)
-result <- bigrquery::bq_table_download(tbl, bigint = "numeric", page_size = 10000)
+tbl <- bigrquery::bq_project_query(GCP_PROJECT, sql) # billed 362.81 MB
+result <- bigrquery::bq_table_download(
+  tbl,
+  bigint = "numeric",
+  page_size = 10000
+)
+result # A tibble: 639,250 × 13
 ```
 
 > Continue...
 
 ```{r}
 # Convert to Arrow Table (columnar, faster for downstream DuckDB queries)
-ga4_arrow <- arrow::as_arrow_table(result)
+ga4_arrow <- arrow::as_arrow_table(result) # scannable Arrow object
 
 # Disconnect from BigQuery — we don't need it anymore
-# dbDisconnect(bq_con)
+dbDisconnect(bq_con)
 
 # Quick look
 print(ga4_arrow)
@@ -212,7 +224,7 @@ print(ga4_arrow)
 
 # 3. Register Arrow Table in DuckDB
 
-DuckDB can query Arrow Tables **without copying data** via zero-copy integration — ideal for large datasets.
+> DuckDB can query Arrow Tables **without copying data** via zero-copy integration — ideal for large datasets.
 
 ```{r}
 #| label: duckdb-setup
@@ -227,9 +239,10 @@ duckdb::duckdb_register_arrow(duck, "ga4", ga4_arrow)
 dbListTables(duck)
 ```
 
--  Check to confirm and list what's available
+-   Check to confirm and list what's available
 
 ```{r}
+#| eval: true
 # Confirm Arrow object exists and type
 exists("ga4_arrow")
 class(ga4_arrow)
@@ -239,12 +252,52 @@ print(ga4_arrow)
 DBI::dbGetQuery(duck, "SELECT COUNT(*) AS n FROM ga4")
 
 # List SQL-visible tables (information_schema is more reliable than SHOW TABLES)
-DBI::dbGetQuery(duck, "
+DBI::dbGetQuery(
+  duck,
+  "
   SELECT table_schema, table_name
   FROM information_schema.tables
   ORDER BY table_schema, table_name
-")
+"
+)
 ```
+
+**Output**:
+
+```         
+> exists("ga4_arrow")
+[1] TRUE
+> class(ga4_arrow)
+[1] "Table"        "ArrowTabular" "ArrowObject"  "R6"          
+> print(ga4_arrow)
+Table
+639250 rows x 13 columns
+$event_date <date32[day]>
+$user_pseudo_id <string>
+$session_id <double>
+$source <string>
+$medium <string>
+$campaign <string>
+$device_category <string>
+$os <string>
+$country <string>
+$event_name <string>
+$event_timestamp <double>
+$revenue <double>
+$transaction_id <string>
+> DBI::dbGetQuery(duck, "SELECT COUNT(*) AS n FROM ga4")
+       n
+1 639250
+> DBI::dbGetQuery(duck, "
++   SELECT table_schema, table_name
++   FROM information_schema.tables
++   ORDER BY table_schema, table_name
++ ")
+                     
+  table_schema  table_name
+1         main ga4_parquet
+```
+
 ------------------------------------------------------------------------
 
 # 4. Analysis with DuckDB SQL
@@ -253,8 +306,11 @@ DBI::dbGetQuery(duck, "
 
 ```{r}
 #| label: daily-sessions
+#| eval: true
 
-daily <- dbGetQuery(duck, "
+daily <- dbGetQuery(
+  duck,
+  "
   SELECT
     event_date,
     COUNT(DISTINCT CASE WHEN event_name = 'session_start'
@@ -266,33 +322,52 @@ daily <- dbGetQuery(duck, "
   FROM ga4
   GROUP BY event_date
   ORDER BY event_date
-") |>
+"
+) |>
   mutate(event_date = as.Date(event_date))
 
 head(daily)
+```
+
+**Output**:
+
+```         
+> head(daily)
+  event_date sessions transactions revenue
+1 2021-01-01     2289           13     975
+2 2021-01-02     2705           14    1026
+3 2021-01-03     2753           14     552
+4 2021-01-04     3317           16     834
+5 2021-01-05     4410           28    1143
+6 2021-01-06     5951           31    2000
 ```
 
 ```{r}
 #| label: plot-daily
 #| fig-width: 10
 #| fig-height: 4
+#| eval: true
+
+library(scales)
 
 ggplot(daily, aes(x = event_date)) +
   geom_col(aes(y = sessions), fill = "#4285F4", alpha = 0.8) +
-  geom_line(aes(y = revenue * max(sessions) / max(revenue)),
-            color = "#EA4335", linewidth = 1) +
+  geom_line(
+    aes(y = revenue * max(sessions) / max(revenue)),
+    color = "#EA4335",
+    linewidth = 1
+  ) +
   scale_y_continuous(
-    name  = "Sessions",
+    name = "Sessions",
     labels = comma,
     sec.axis = sec_axis(
       ~ . * max(daily$revenue) / max(daily$sessions),
-      name   = "Revenue (USD)",
+      name = "Revenue (USD)",
       labels = dollar
     )
   ) +
   scale_x_date(date_labels = "%b %d", date_breaks = "1 week") +
-  labs(title = "Daily Sessions & Revenue",
-       x = NULL) +
+  labs(title = "Daily Sessions & Revenue", x = NULL) +
   theme_minimal(base_size = 13) +
   theme(axis.title.y.right = element_text(color = "#EA4335"))
 ```
@@ -302,7 +377,9 @@ ggplot(daily, aes(x = event_date)) +
 ```{r}
 #| label: channel-performance
 
-channels <- dbGetQuery(duck, "
+channels <- dbGetQuery(
+  duck,
+  "
   WITH sessions AS (
     SELECT
       source,
@@ -334,7 +411,8 @@ channels <- dbGetQuery(duck, "
   GROUP BY s.source, s.medium, p.transactions, p.revenue
   ORDER BY sessions DESC
   LIMIT 20
-")
+"
+)
 
 channels
 ```
@@ -344,27 +422,39 @@ channels
 ```{r}
 #| label: funnel
 
-all_counts <- dbGetQuery(duck, "
+all_counts <- dbGetQuery(
+  duck,
+  "
   SELECT
     event_name,
     COUNT(DISTINCT user_pseudo_id) AS users
   FROM ga4
   GROUP BY event_name
-")
+"
+)
 
 funnel <- all_counts |>
-  filter(event_name %in% c(
-    "session_start",
-    "page_view",
-    "view_item",
-    "add_to_cart",
-    "purchase")
-    ) |>
+  filter(
+    event_name %in%
+      c(
+        "session_start",
+        "page_view",
+        "view_item",
+        "add_to_cart",
+        "purchase"
+      )
+  ) |>
   mutate(
     event_name = factor(
-      event_name, 
-      levels = c("session_start","page_view","view_item","add_to_cart","purchase")
-      ),
+      event_name,
+      levels = c(
+        "session_start",
+        "page_view",
+        "view_item",
+        "add_to_cart",
+        "purchase"
+      )
+    ),
     step_pct = round(100 * users / max(users), 1)
   ) |>
   arrange(event_name)
@@ -379,12 +469,14 @@ funnel
 
 ggplot(funnel, aes(x = event_name, y = users, fill = event_name)) +
   geom_col(show.legend = FALSE) +
-  geom_text(aes(label = glue("{comma(users)}\n({step_pct}%)")),
-            vjust = -0.3, size = 3.5) +
+  geom_text(
+    aes(label = glue("{comma(users)}\n({step_pct}%)")),
+    vjust = -0.3,
+    size = 3.5
+  ) +
   scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.15))) +
   scale_fill_brewer(palette = "Blues", direction = -1) +
-  labs(title = "GA4 Event Funnel",
-       x = NULL, y = "Unique Users") +
+  labs(title = "GA4 Event Funnel", x = NULL, y = "Unique Users") +
   theme_minimal(base_size = 13)
 ```
 
@@ -393,7 +485,9 @@ ggplot(funnel, aes(x = event_name, y = users, fill = event_name)) +
 ```{r}
 #| label: device-breakdown
 
-devices <- dbGetQuery(duck, "
+devices <- dbGetQuery(
+  duck,
+  "
   SELECT
     device_category,
     COUNT(DISTINCT user_pseudo_id || CAST(session_id AS VARCHAR)) AS sessions,
@@ -401,7 +495,8 @@ devices <- dbGetQuery(duck, "
   FROM ga4
   GROUP BY device_category
   ORDER BY sessions DESC
-")
+"
+)
 
 devices
 ```
@@ -417,16 +512,16 @@ You can also use familiar `dplyr` verbs directly on the Arrow table. Arrow trans
 
 # dplyr on Arrow — lazy evaluation, no full materialisation until collect()
 top_countries <- ga4_arrow |>
-  as_tibble() |>                              # convert Arrow Table to a tibble
+  as_tibble() |> # convert Arrow Table to a tibble
   filter(event_name == "purchase") |>
   group_by(country) |>
   summarise(
     transactions = n_distinct(transaction_id),
-    revenue      = sum(revenue, na.rm = TRUE),
-    .groups      = "drop"
+    revenue = sum(revenue, na.rm = TRUE),
+    .groups = "drop"
   ) |>
   arrange(desc(revenue)) |>
-  slice_head(n = 10)                                  
+  slice_head(n = 10)
 
 top_countries
 ```
@@ -442,18 +537,21 @@ top_countries
 # Write Arrow Table to Parquet — compressed, fast to re-read
 arrow::write_parquet(
   ga4_arrow,
-  "ga4_export.parquet",
+  "data/ga4_export.parquet",
   compression = "snappy"
 )
 
 # Later: read back without touching BigQuery at all
-ga4_from_parquet <- arrow::read_parquet("ga4_export.parquet")
+ga4_from_parquet <- arrow::read_parquet("data/ga4_export.parquet")
 
 # Or query it directly from DuckDB
-dbExecute(duck, "
+dbExecute(
+  duck,
+  "
   CREATE VIEW ga4_parquet AS
-  SELECT * FROM read_parquet('ga4_export.parquet')
-")
+  SELECT * FROM read_parquet('data/ga4_export.parquet')
+"
+)
 ```
 
 ------------------------------------------------------------------------
@@ -472,7 +570,7 @@ dbDisconnect(duck, shutdown = TRUE)
 # Workflow Summary
 
 | Step | Tool | Why |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | Auth & query BigQuery | `bigrquery` + `DBI` | Push filtering to BQ, pay only for bytes scanned |
 | Store result | `arrow` Arrow Table | Columnar, zero-copy, RAM-efficient |
 | Heavy analytics | `duckdb` | Fast in-process OLAP SQL, no server needed |

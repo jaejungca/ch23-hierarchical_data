@@ -10,7 +10,7 @@ format:
       dark: darkly
     toc: true
     toc-depth: 3
-    toc-location: left
+    toc-location: left-body
     toc-title: "Contents"
     toc-expand: true
     code-fold: show

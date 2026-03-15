@@ -1,6 +1,6 @@
 ---
 title: "Recommended GA4 Workflow Guideline in R"
-subtitle: "Incorporating Ch21, Ch22, and Ch23"
+subtitle: "General Guide for Minimizing Query Cost"
 author: "Jae Jung"
 date: "2026-03-11"
 format: 
