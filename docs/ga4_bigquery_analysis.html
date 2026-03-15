@@ -3868,7 +3868,7 @@ vertical-align: -.125em;
 
 </head>
 
-<body class="nav-fixed quarto-light">
+<body class="nav-sidebar floating nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -3889,14 +3889,6 @@ vertical-align: -.125em;
     <a class="nav-link" href="./index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./Ga4-R-Methods-Guide.html"> 
-<span class="menu-text">Guide to GA4 Data Engineering Methods</span></a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link active" href="./ga4_bigquery_analysis.html" aria-current="page"> 
-<span class="menu-text">GA4 Data Analysis with Arrow &amp; DuckDB</span></a>
-  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -3904,10 +3896,39 @@ vertical-align: -.125em;
 </div>
       </div> <!-- /container-fluid -->
     </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ga4_bigquery_analysis.html">GA4 BigQuery Analysis with Arrow &amp; DuckDB</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
 </header>
 <!-- content -->
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./Ga4-R-Methods-Guide.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Guideline for Working with GA4 Data in R</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ga4_bigquery_analysis.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">GA4 BigQuery Analysis with Arrow &amp; DuckDB</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
         <nav id="TOC" role="doc-toc" class="toc-active">
@@ -4271,16 +4292,16 @@ Warning messages:
 <pre><code># A tibble: 639,250 × 13
    event_date user_pseudo_id   session_id source medium campaign device_category
    &lt;date&gt;     &lt;chr&gt;                 &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;    &lt;chr&gt;          
- 1 2021-01-10 1120293.9586645… 8726582798 (data… (data… (data d… mobile         
- 2 2021-01-10 1120293.9586645… 8726582798 (data… (data… (data d… mobile         
- 3 2021-01-10 1263080.7626875… 8658768628 (data… (data… (data d… desktop        
- 4 2021-01-10 1263080.7626875… 8658768628 (data… (data… (data d… desktop        
- 5 2021-01-10 1263080.7626875… 8658768628 (data… (data… (data d… desktop        
- 6 2021-01-10 1306493.1469289… 8136825610 (data… (data… (data d… desktop        
- 7 2021-01-10 1306493.1469289… 8136825610 (data… (data… (data d… desktop        
- 8 2021-01-10 1306493.1469289… 8136825610 (data… (data… (data d… desktop        
- 9 2021-01-10 1306493.1469289… 8136825610 (data… (data… (data d… desktop        
-10 2021-01-10 1306493.1469289… 8136825610 (data… (data… (data d… desktop        
+ 1 2021-01-03 1160488.2375923… 3672590451 (data… (data… (data d… desktop        
+ 2 2021-01-03 1160488.2375923… 3672590451 (data… (data… (data d… desktop        
+ 3 2021-01-03 1160488.2375923… 3672590451 (data… (data… (data d… desktop        
+ 4 2021-01-03 1160488.2375923… 3672590451 (data… (data… (data d… desktop        
+ 5 2021-01-03 1160488.2375923… 3672590451 (data… (data… (data d… desktop        
+ 6 2021-01-03 1272248.3527408… 1844478371 (data… (data… (data d… desktop        
+ 7 2021-01-03 1272248.3527408… 1844478371 (data… (data… (data d… desktop        
+ 8 2021-01-03 1272248.3527408… 1844478371 (data… (data… (data d… desktop        
+ 9 2021-01-03 1412894.3157340… 6264365798 (data… (data… (data d… mobile         
+10 2021-01-03 1561053.3911726…   22759485 (data… (data… (data d… mobile         
 # ℹ 639,240 more rows
 # ℹ 6 more variables: os &lt;chr&gt;, country &lt;chr&gt;, event_name &lt;chr&gt;,
 #   event_timestamp &lt;dbl&gt;, revenue &lt;dbl&gt;, transaction_id &lt;chr&gt;</code></pre>
@@ -5345,7 +5366,7 @@ $transaction_id &lt;string&gt;
 <span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a><span class="co">  echo: fenced</span></span>
 <span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
 <span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a><span class="co">  message: false</span></span>
-<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a><span class="co">  cache: false  # Cache chunks to avoid re-running expensive queries</span></span>
+<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a><span class="co">  cache: true  # Cache chunks to avoid re-running expensive queries</span></span>
 <span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
 <span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a><span class="fu"># Setup</span></span>

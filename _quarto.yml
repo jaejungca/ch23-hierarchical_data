@@ -11,10 +11,8 @@ website:
     left: 
       - href: index.qmd
         text: Home
-      - href: Ga4-R-Methods-Guide.qmd
-        text: Guide to GA4 Data Engineering Methods
-      - href: ga4_bigquery_analysis.qmd
-        text: GA4 Data Analysis with Arrow & DuckDB
+  sidebar: 
+    contents: auto  # auto-discovers all .qmd files — no manual listing needed
 
 format: 
   html: 
