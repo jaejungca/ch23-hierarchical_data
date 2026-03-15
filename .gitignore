@@ -9,3 +9,6 @@ hierarchical-data-I_files/
 data/
 ga4_export.parquet
 ga4*cache
+
+/.quarto/
+**/*.quarto_ipynb

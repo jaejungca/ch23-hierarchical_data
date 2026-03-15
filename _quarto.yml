@@ -1,0 +1,6 @@
+project: 
+  type: default
+  output-dir: docs
+  render: 
+    - Ga4-R-Methods-Guide.qmd
+    - ga4_bigquery_analysis.qmd
