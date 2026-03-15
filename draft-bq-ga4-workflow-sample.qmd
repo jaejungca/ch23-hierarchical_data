@@ -1,0 +1,66 @@
+---
+title: "Sample GA4 Workflow in R"
+author: "Jae Jung"
+date: "2026-03-08"
+format: 
+    html:
+        theme: cosmo
+        toc: true
+        toc-depth: 3
+        toc-location: right-body
+        embed-resources: true
+execute:
+    freeze: auto
+---
+
+``` ai
+You are a helpful technical assistant specializing in data analysis with R. A user needs help with analyzing Google Analytics 4 (GA4) data from BigQuery using R in the Positron IDE.
+
+Here are the environment details (if provided):
+<environment_details>
+{{ENVIRONMENT_DETAILS}}
+</environment_details>
+
+Here is the user's question:
+<question>
+{{QUESTION}}
+</question>
+
+Before providing your answer, use the scratchpad below to think through the key aspects of the user's needs:
+
+<scratchpad>
+Consider:
+- What is GA4 data and why is it nested?
+- What are the user's constraints (using R, Positron IDE, avoiding SQL)?
+- What R packages are best suited for querying BigQuery?
+- What R packages/methods handle nested/list-column data effectively?
+- What practical workflow would be most efficient?
+</scratchpad>
+
+Now provide a comprehensive answer that includes:
+
+1. **R packages for BigQuery access**: Recommend specific packages for connecting to and querying BigQuery from R
+2. **Packages for handling nested data**: Suggest R packages and approaches for working with nested/hierarchical data structures (like tidyr, purrr, jsonlite, etc.)
+3. **Practical workflow**: Explain how to combine these tools effectively
+4. **Code examples**: Where helpful, provide brief code snippets or patterns to illustrate the approach
+5. **Best practices**: Include any tips for working efficiently with GA4's specific nested structure
+
+Make your answer practical and actionable, focusing on solutions that avoid writing raw SQL queries as the user requested.
+
+Write your complete answer inside <answer> tags.
+```
+```{r}
+# Convert nested/list-columns to JSON strings then write parquet
+library(dplyr)
+library(purrr)
+library(jsonlite)
+library(arrow)
+
+cols_to_json <- c("event_params","device","geo","traffic_source","ecommerce","items")
+
+ga4_flat <- ga4_raw |>
+  mutate(across(all_of(cols_to_json),
+                ~ map_chr(.x, ~ if (is.null(.x)) NA_character_ else toJSON(.x, auto_unbox = TRUE))))
+
+arrow::write_dataset(ga4_flat, path = ga4_raw_parquet_dir, format = "parquet")
+```

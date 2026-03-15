@@ -1,6 +1,22 @@
 project: 
-  type: default
+  type: website
   output-dir: docs
   render: 
-    - Ga4-R-Methods-Guide.qmd
-    - ga4_bigquery_analysis.qmd
+    - "*.qmd"
+    - "!draft-*.qmd"
+
+website: 
+  title: "Analyzing GA4 Data in R"
+  navbar: 
+    left: 
+      - href: index.qmd
+        text: Home
+      - href: Ga4-R-Methods-Guide.qmd
+        text: Guide to GA4 Data Engineering Methods
+      - href: ga4_bigquery_analysis.qmd
+        text: GA4 Data Analysis with Arrow & DuckDB
+
+format: 
+  html: 
+    theme: cosmo
+    toc: true

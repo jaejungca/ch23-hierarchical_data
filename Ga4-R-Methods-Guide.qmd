@@ -1,6 +1,9 @@
 ---
 title: "Guideline for Working with GA4 Data in R"
 subtitle: "File Sizes & Comparisons of Methods"
+description: "This page discusses pros and cons of various methods of working with GA4 data in R by considering file sizes - small data (a week) vs. large data (many months)"
+categories: [BigQuery, Arrow, Parquet, DuckDB, SQL]
+order: 1
 author: "Jae Jung"
 date: today
 format:
