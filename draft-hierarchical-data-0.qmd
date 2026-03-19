@@ -1,0 +1,396 @@
+---
+title: "Rectangling Hierarchical Data: Ch23"
+subtitle: "Fundamentals"
+description: "This page the fundamental concept about hierarchal data and how to flatten it"
+categories: [tidyr, JSON, tidyverse]
+order: 3
+author: "Jae Jung"
+date: today
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    toc: true
+    toc-depth: 3
+    toc-location: left-body
+    toc-title: "Contents"
+    toc-expand: true
+    code-fold: show
+    code-copy: true
+    code-tools: true
+    highlight-style: github
+    fig-width: 9
+    fig-height: 5
+    fig-align: center
+    df-print: paged
+    number-sections: true
+    smooth-scroll: true
+    #embed-resources: true
+    callout-appearance: minimal
+execute:
+  warning: false
+  message: false
+  cache: true
+  freeze: auto
+---
+
+# What is data rectangling?
+
+-   Taking data that is fundamentally hierarchical, or tree-like, and converting it into a rectangular data frame made up of rows and columns.
+
+-   This is important because hierarchical data is surprisingly common, especially when working with data that comes from the web.
+
+-   lists make hierarchical data possible.
+
+    -   `tidyr::unnest_longer()` and `tidyr::unnest_wider()`.
+
+## Packages to use
+
+```{r}
+#install.packages("repurrrsive")
+library(tidyverse)
+library(repurrrsive)
+library(jsonlite)
+```
+
+# Lists
+
+```{r}
+x1 <- list(1:4, "a", TRUE)
+x1
+```
+
+> Naming the components, or children, of a list
+
+```{r}
+x2 <- list(a = 1:2, b = 1:3, c = 1:4)
+x2
+```
+
+> To print use `str()`, which generates a compact display of the structure, de-emphasizing the contents:
+
+```{r}
+str(x1)
+
+str(x2)
+```
+
+## Hierarchy
+
+> -   Lists can contain any type of object, including other lists.
+> -   This makes them suitable for representing hierarchical (tree-like) structures:
+
+```{r}
+x3 <- list(list(1, 2), list(3, 4))
+str(x3)
+```
+
+> -   This is notably different to c(), which generates a flat vector:
+
+```{r}
+c(c(1, 2), c(3, 4))
+```
+
+```{r}
+x5 <- list(1, list(2, list(3, list(4, list(5)))))
+str(x5)
+
+view(x5)
+```
+
+## List-Columns
+
+```{r}
+df <- tibble(
+  x = 1:2,
+  y = c("a", "b"),
+  z = list(list(1, 2), list(3, 4, 5))
+)
+df
+```
+
+```{r}
+df |>
+  filter(x == 1)
+```
+
+> -   Computing with list-columns is harder.
+
+> -   tibble() treats lists like vectors and the print method has been designed with lists in mind.
+
+# Unnesting
+
+> -   List-columns tend to come in two basic forms: named and unnamed.
+
+> -   When the children are named, they tend to have the same names in every row.
+
+## Named list-columns
+
+> -   Named list-columns naturally unnest into **columns**: each named element becomes a new named column.
+
+```{r}
+df1 <- tribble(
+  ~x , ~y                   ,
+   1 , list(a = 11, b = 12) ,
+   2 , list(a = 21, b = 22) ,
+   3 , list(a = 31, b = 32) ,
+)
+df1
+```
+
+## Unnamed list-columns
+
+> -   When the children are unnamed, the number of elements tends to vary from row-to-row.
+
+> -   Unnamed list-columns naturally unnest into **rows**: you’ll get one row for each child.
+
+```{r}
+df2 <- tribble(
+  ~x , ~y               ,
+   1 , list(11, 12, 13) ,
+   2 , list(21)         ,
+   3 , list(31, 32)     ,
+)
+```
+
+## `unnest_wider()`
+
+> Used when each row has the same number of elements with the same names
+
+```{r}
+df1 |>
+  unnest_wider(y)
+```
+
+> By default, the names of the new columns come exclusively from the names of the list elements, but you can use the `names_sep` argument to request that they combine the column name and the element name. This is useful for disambiguating repeated names.
+
+```{r}
+df1 |>
+  unnest_wider(y, names_sep = "_")
+```
+
+## `unnest_longer()`
+
+> Used when each row contains an unnamed list
+
+```{r}
+df2 |>
+  unnest_longer(y)
+```
+
+> Note how x is duplicated for each element inside of y: we get one row of output for each element inside the list-column.
+
+> But what happens if one of the elements is empty, as in the following example?
+
+```{r}
+df6 <- tribble(
+  ~x  , ~y         ,
+  "a" , list(1, 2) ,
+  "b" , list(3)    ,
+  "c" , list()
+)
+
+df6 |>
+  unnest_longer(y)
+```
+
+> We get zero rows in the output, so the row effectively disappears.
+
+> If you want to preserve that row, adding `NA` in y, set `keep_empty` = `TRUE`.
+
+```{r}
+df6 <- tribble(
+  ~x  , ~y         ,
+  "a" , list(1, 2) ,
+  "b" , list(3)    ,
+  "c" , list(NA)
+)
+
+df6 |>
+  unnest_longer(y, keep_empty = TRUE)
+```
+
+## Inconsitent Types
+
+> What happens if you unnest a list-column that contains different types of vector?
+
+```{r}
+df4 <- tribble(
+  ~x  , ~y                 ,
+  "a" , list(1)            ,
+  "b" , list("a", TRUE, 5)
+)
+```
+
+```{r}
+df4 |>
+  unnest_longer(y)
+```
+
+> The output contains a list-column, but every element of the list-column contains a single element.
+
+> Dealing with inconsistent types is challenging and the details depend on the precise nature of the problem and your goals, but you’ll most likely need tools from Iteration.
+
+## Other functions from tidyr
+
+-   [`unnest_auto()`](https://tidyr.tidyverse.org/reference/unnest_auto.html) automatically picks between [`unnest_longer()`](https://tidyr.tidyverse.org/reference/unnest_longer.html) and [`unnest_wider()`](https://tidyr.tidyverse.org/reference/unnest_wider.html) based on the structure of the list-column. It’s great for rapid exploration, but ultimately it’s a bad idea because it doesn’t force you to understand how your data is structured, and makes your code harder to understand.
+
+-   [`unnest()`](https://tidyr.tidyverse.org/reference/unnest.html) expands both rows and columns. It’s useful when you have a list-column that contains a **2d structure** like a data frame, which you don’t see in this book, but you might encounter if you use the [tidymodels](https://www.tmwr.org/base-r.html#combining-base-r-models-and-the-tidyverse) ecosystem.
+
+## Exercises
+
+1.  What happens when you use [`unnest_wider()`](https://tidyr.tidyverse.org/reference/unnest_wider.html) with unnamed list-columns like `df2`? What argument is now necessary? What happens to missing values?
+
+2.  What happens when you use [`unnest_longer()`](https://tidyr.tidyverse.org/reference/unnest_longer.html) with named list-columns like `df1`? What additional information do you get in the output? How can you suppress that extra detail?
+
+3.  From time-to-time you encounter data frames with multiple list-columns with aligned values. For example, in the following data frame, the values of `y` and `z` are aligned (i.e. `y` and `z` will always have the same length within a row, and the first value of `y` corresponds to the first value of `z`). What happens if you apply two [`unnest_longer()`](https://tidyr.tidyverse.org/reference/unnest_longer.html) calls to this data frame? How can you preserve the relationship between `x` and `y`? (Hint: carefully read the docs).
+
+```{r}
+df4 <- tribble(
+  ~x  , ~y                              , ~z                              ,
+  "a" , list("y-a-1", "y-a-2")          , list("z-a-1", "z-a-2")          ,
+  "b" , list("y-b-1", "y-b-2", "y-b-3") , list("z-b-1", "z-b-2", "z-b-3")
+)
+```
+
+# Case Studies
+
+> Real data typically contains multiple levels of nesting that require multiple calls to unnest_longer() and/or unnest_wider().
+
+## Very wide data
+
+> **gh_repos**. This is a list that contains data about a collection of GitHub repositories retrieved using the GitHub API.
+
+```{r}
+library(repurrrsive)
+#view(gh_repos)
+
+repos <- tibble(json = gh_repos)
+repos
+```
+
+```{r}
+repos |>
+  unnest_longer(json)
+```
+
+```{r}
+repos |>
+  unnest_longer(json) |>
+  unnest_wider(json)
+
+```
+
+```{r}
+repos |>
+  unnest_longer(json) |>
+  unnest_wider(json) |>
+  names() |>
+  head(10)
+```
+
+```{r}
+repos |>
+  unnest_longer(json) |>
+  unnest_wider(json) |>
+  select(id, full_name, owner, description)
+```
+
+```{r}
+#| eval: false
+repos |>
+  unnest_longer(json) |>
+  unnest_wider(json) |>
+  select(id, full_name, owner, description) |>
+  unnest_wider(owner)
+```
+
+**Output**:
+
+```         
+Error in `unnest_wider()` at w09-hierarchical-data/ch23/draft-hierarchical-data-0.qmd:301:1:
+! Can't duplicate names between the affected columns and the original data.
+✖ These names are duplicated:
+  ℹ `id`, from `owner`.
+ℹ Use `names_sep` to disambiguate using the column name.
+```
+
+```{r}
+repos |>
+  unnest_longer(json) |>
+  unnest_wider(json) |>
+  select(id, full_name, owner, description) |>
+  unnest_wider(owner, names_sep = "_")
+```
+
+## Relational data
+
+> Nested data is sometimes used to represent data that we’d usually spread across multiple data frames.
+
+> **Example**: `got_chars` which contains data about characters that appear in the Game of Thrones books and TV series.
+
+```{r}
+chars <- tibble(json = got_chars)
+chars
+
+# Widening
+chars |>
+  unnest_wider(json)
+
+# selecting a few
+chars |>
+  unnest_wider(json) |>
+  select(id, name, gender, culture, born, died, alive)
+
+# search for list-columns
+chars |>
+  unnest_wider(json) |>
+  select(id, where(is.list))
+
+# explore titles column
+chars |>
+  unnest_wider(json) |>
+  select(id, titles) |>
+  unnest_longer(titles)
+
+# cleanning
+titles <- chars |>
+  unnest_wider(json) |>
+  select(id, titles) |>
+  unnest_longer(titles) |>
+  filter(titles != "") |>
+  rename(title = titles)
+
+titles
+```
+
+> You could imagine creating a table like this for each of the list-columns, then using joins to combine them with the character data as you need it.
+
+## Exercises
+
+1.  Roughly estimate when `gh_repos` was created. Why can you only roughly estimate the date?
+
+2.  The `owner` column of `gh_repos` contains a lot of duplicated information because each owner can have many repos. Can you construct an `owners` data frame that contains one row for each owner? (Hint: does [`distinct()`](https://dplyr.tidyverse.org/reference/distinct.html) work with `list-cols`?)
+
+3.  Follow the steps used for `titles` to create similar tables for the aliases, allegiances, books, and TV series for the Game of Thrones characters.
+
+4.  Explain the following code line-by-line. Why is it interesting? Why does it work for `got_chars` but might not work in general?
+
+```{r}
+tibble(json = got_chars) |>
+  unnest_wider(json) |>
+  select(id, where(is.list)) |>
+  pivot_longer(
+    where(is.list),
+    names_to = "name",
+    values_to = "value"
+  ) |>
+  unnest_longer(value)
+```
+
+5.  In `gmaps_cities`, what does `address_components` contain? Why does the length vary between rows? Unnest it appropriately to figure it out. (Hint: `types` always appears to contain two elements. Does [`unnest_wider()`](https://tidyr.tidyverse.org/reference/unnest_wider.html) make it easier to work with than [`unnest_longer()`](https://tidyr.tidyverse.org/reference/unnest_longer.html)?) .
+
+# Reference
+
+[R for Data Science](https://r4ds.hadley.nz/rectangling.html)

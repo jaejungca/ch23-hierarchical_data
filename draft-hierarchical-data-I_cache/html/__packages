@@ -1,0 +1,16 @@
+bigrquery
+DBI
+dplyr
+tidyr
+purrr
+stringr
+lubridate
+ggplot2
+scales
+gt
+glue
+forcats
+tidyverse
+tibble
+readr
+arrow
