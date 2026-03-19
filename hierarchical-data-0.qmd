@@ -1,7 +1,7 @@
 ---
-title: "Rectangling Hierarchical Data: Ch23"
-subtitle: "Fundamentals"
-description: "This page the fundamental concept about hierarchal data and how to flatten it"
+title: "Rectangling Hierarchical Data"
+subtitle: "Summary of the Fundamentals of unnesting list-columns explained in Ch23, RDDS"
+description: "This page summarizes the fundamental concepts about hierarchal data and how to flatten it"
 categories: [tidyr, JSON, tidyverse]
 order: 3
 author: "Jae Jung"
@@ -367,6 +367,100 @@ titles
 
 > You could imagine creating a table like this for each of the list-columns, then using joins to combine them with the character data as you need it.
 
+## Deeply nested
+
+> When the data is very deeply nested and requires repeated rounds of `unnest_wider()` and `unnest_longer()` to unravel: `gmaps_cities`.
+
+```{r}
+gmaps_cities
+```
+
+```{r}
+gmaps_cities |>
+  unnest_wider(json)
+```
+
+> -   Drop the status column since they’re all OK
+
+> -   Unnamed list
+
+```{r}
+gmaps_cities |>
+  unnest_wider(json) |>
+  select(-status) |>
+  unnest_longer(results)
+```
+
+> Now results is a named list, so we’ll use `unnest_wider()`:
+
+```{r}
+locations <- gmaps_cities |>
+  unnest_wider(json) |>
+  select(-status) |>
+  unnest_longer(results) |>
+  unnest_wider(results)
+
+locations
+```
+
+> There are a few different places we could go from here. We might want to determine the exact location of the match, which is stored in the `geometry` list-column:
+
+```{r}
+locations |>
+  select(city, formatted_address, geometry) |>
+  unnest_wider(geometry)
+```
+
+> We can unnest location to see the latitude (lat) and longitude (lng):
+
+```{r}
+locations |>
+  select(city, formatted_address, geometry) |>
+  unnest_wider(geometry) |>
+  unnest_wider(location)
+```
+
+> Extracting the bounds requires a few more steps:
+
+```{r}
+locations |>
+  select(city, formatted_address, geometry) |>
+  unnest_wider(geometry) |>
+  # focus on the variables of interest
+  select(!location:viewport) |>
+  unnest_wider(bounds)
+```
+
+> We then rename southwest and northeast (the corners of the rectangle) so we can use names_sep to create short but evocative names:
+
+```{r}
+locations |>
+  select(city, formatted_address, geometry) |>
+  unnest_wider(geometry) |>
+  select(!location:viewport) |>
+  unnest_wider(bounds) |>
+  rename(ne = northeast, sw = southwest) |>
+  unnest_wider(c(ne, sw), names_sep = "_")
+```
+
+> Once you’ve discovered the path to get to the components you’re interested in, you can extract them directly using another tidyr function, hoist():
+
+```{r}
+locations |>
+  select(city, formatted_address, geometry) |>
+  hoist(
+    geometry,
+    ne_lat = c("bounds", "northeast", "lat"),
+    sw_lat = c("bounds", "southwest", "lat"),
+    ne_lng = c("bounds", "northeast", "lng"),
+    sw_lng = c("bounds", "southwest", "lng"),
+  )
+```
+
+## What Is `hoist()`?
+
+`hoist()` is a function from `{tidyr}` that lets you **pull specific elements out of a list-column by name or position**, without unnesting the entire structure. Think of it as a surgical tool compared to the blunt instruments of `unnest_wider()` and `unnest_longer()`
+
 ## Exercises
 
 1.  Roughly estimate when `gh_repos` was created. Why can you only roughly estimate the date?
@@ -390,6 +484,109 @@ tibble(json = got_chars) |>
 ```
 
 5.  In `gmaps_cities`, what does `address_components` contain? Why does the length vary between rows? Unnest it appropriately to figure it out. (Hint: `types` always appears to contain two elements. Does [`unnest_wider()`](https://tidyr.tidyverse.org/reference/unnest_wider.html) make it easier to work with than [`unnest_longer()`](https://tidyr.tidyverse.org/reference/unnest_longer.html)?) .
+
+# JSON
+
+> JSON is short for **j**ava**s**cript **o**bject **n**otation and is the way that most web APIs return data. It’s important to understand it because while JSON and R’s data types are pretty similar, there isn’t a perfect 1-to-1 mapping, so it’s good to understand a bit about JSON if things go wrong.
+
+## Data Types
+
+It has six key data types. Four of them are scalars:
+
+-   The simplest type is a null (`null`) which plays the same role as `NA` in R. It represents the absence of data.
+
+-   A **string** is much like a string in R, but must always use double quotes.
+
+-   A **number** is similar to R’s numbers: they can use integer (e.g., 123), decimal (e.g., 123.45), or scientific (e.g., 1.23e3) notation. JSON doesn’t support `Inf`, `-Inf`, or `NaN`.
+
+-   A **boolean** is similar to R’s `TRUE` and `FALSE`, but uses lowercase `true` and `false`.
+
+To represent multiple values you need to use one of the two remaining types: arrays and objects.
+
+-   Both arrays and objects are similar to lists in R; the difference is whether or not they’re named.
+
+    -   An **array** is like an unnamed list, and is written with `[]`. For example `[1, 2, 3]` is an array containing 3 numbers, and `[null, 1, "string", false]` is an array that contains a null, a number, a string, and a boolean.
+
+    -   An **object** is like a named list, and is written with [`{}`](https://rdrr.io/r/base/Paren.html). The names (keys in JSON terminology) are strings, so must be surrounded by quotes. For example, `{"x": 1, "y": 2}` is an object that maps `x` to 1 and `y` to 2.
+
+## jsonlite
+
+-   This package convert JSON into R data structures
+
+-   [`read_json()`](https://jeroen.r-universe.dev/jsonlite/reference/read_json.html) and [`parse_json()`](https://jeroen.r-universe.dev/jsonlite/reference/read_json.html). 
+
+```{r}
+# A path to a json file inside the package:
+gh_users_json()
+#> [1] "/home/runner/work/_temp/Library/repurrrsive/extdata/gh_users.json"
+
+# Read it with read_json()
+gh_users2 <- read_json(gh_users_json())
+
+# Check it's the same as the data we were using previously
+identical(gh_users, gh_users2)
+#> [1] TRUE
+```
+
+```{r}
+str(parse_json("1"))
+```
+
+```{r}
+str(parse_json('[1, 2, 3]')) # array
+```
+
+```{r}
+str(parse_json('{"x": [1, 2, 3]}')) # object
+```
+
+## Starting the rectangling process
+
+> In most cases, JSON files contain a single top-level array
+
+```{r}
+json <- '[
+  {"name": "John", "age": 34},
+  {"name": "Susan", "age": 27}
+]'
+
+df <- tibble(json = parse_json(json))
+df
+```
+
+```{r}
+df |>
+  unnest_wider(json)
+```
+
+> In rarer cases, the JSON file consists of a single top-level JSON object, representing one “thing”. In this case, you’ll need to kick off the rectangling process by wrapping it in a list, before you put it in a tibble.
+```{r}
+json <- '{
+  "status": "OK", 
+  "results": [
+    {"name": "John", "age": 34},
+    {"name": "Susan", "age": 27}
+ ]
+}
+'
+df <- tibble(json = list(parse_json(json)))
+df
+```
+
+```{r}
+df |>
+  unnest_wider(json) |>
+  unnest_longer(results) |>
+  unnest_wider(results)
+```
+
+> Alternatively, you can reach inside the parsed JSON and start with the bit that you actually care about:
+
+```{r}
+df <- tibble(results = parse_json(json)$results)
+df |>
+  unnest_wider(results)
+```
 
 # Reference
 
