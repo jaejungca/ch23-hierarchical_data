@@ -94,7 +94,7 @@ By the end of this workshop you will be able to:
 Google provides a **free public GA4 dataset** in BigQuery derived from their own online store ([merch.google.com](https://merch.google.com)). The data covers real shopping behaviour — page views, product interactions, and purchases — but user identifiers have been obfuscated for privacy.
 
 | Detail | Value |
-|------------------------|------------------------------------------------|
+|------------------------|-----------------------------------------------|
 | BigQuery path | `bigquery-public-data.ga4_obfuscated_sample_ecommerce` |
 | Date range | November 2020 – January 2021 |
 | Table format | One table per day: `events_YYYYMMDD` |
@@ -1128,11 +1128,10 @@ Flat rectangular tibble         (event_params after)
 This pipeline applies identically to `event_params` and `user_properties`.
 :::
 
-
 ## Quick reference
 
 | Task | Code |
-|-----------------------|-------------------------------------------------|
+|------------------------|------------------------------------------------|
 | Start session | `con <- dbConnect(duckdb())` then `CREATE VIEW ga4 AS ...` |
 | Count events | `SELECT event_name, COUNT(*) FROM ga4 GROUP BY 1` |
 | Filter by date | `WHERE event_date BETWEEN '20210101' AND '20210131'` |
