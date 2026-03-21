@@ -4,14 +4,14 @@
     "href": "index.html",
     "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
     "section": "",
-    "text": "Introduction\n  Tools"
+    "text": "A practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis."
   },
   {
     "objectID": "index.html#introduction",
     "href": "index.html#introduction",
     "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
-    "section": "Introduction",
-    "text": "Introduction\nA practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis."
+    "section": "",
+    "text": "A practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis."
   },
   {
     "objectID": "index.html#tools",
