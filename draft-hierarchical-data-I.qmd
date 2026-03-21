@@ -1,6 +1,6 @@
 ---
-title: "Rectangling Hierarchical Data: Part I"
-subtitle: "R4DS Chapter 23 Concepts Applied to Google Analytics 4 in BigQuery"
+title: "Rectangling GA4 Hierarchical Data: Part I"
+subtitle: "Applying R4DS Chapter 23 Concepts to Google Analytics 4 in BigQuery"
 description: "This page discusses pros and cons of various methods of working with GA4 data in R by considering file sizes - small data (a week) vs. large data (many months)"
 categories: [BigQuery, Arrow, Parquet, DuckDB, SQL]
 order: 2
@@ -449,9 +449,9 @@ The `device` list-column is replaced by individual columns (13 of them): `catego
 
 > When unnesting multiple struct columns that might share field names, use `names_sep` to prefix each new column:
 
-``` r
+```{{r}}
 # Prevents collisions if two structs both have, e.g., a "version" field
-ga4_raw |>
+ga4 |>
   unnest_wider(device, names_sep = "_") |>   # → device_category, device_browser
   unnest_wider(geo,    names_sep = "_")       # → geo_country, geo_city
 ```
@@ -540,25 +540,30 @@ This is the pattern covered in R4DS Chapter 23 using `gh_repos` as the example: 
 
 # Step 0: examine the items column for a purchase event
 purchase_rows <- which(ga4_raw$event_name == "purchase")
-ga4_raw |>
+ga4 |>
   filter(row_number() == purchase_rows[1]) |>
   select(event_name, items) |>
   unnest(items) # Quick look
 ```
 
--   Compare with below
+:::callout-note
+`unnest()` unnest automatically by using a combination of both `unnest_wider` and `unnest_longer`. It is not good for learning. 
+
+Compare the code above with the one below.
+:::
+
 
 ```{r}
-ga4_raw |>
+ga4 |>
   filter(row_number() == purchase_rows[1]) |>
-  select(event_name, items) |>
-  unnest_longer(items) |>
-  unnest_wider(items)
+  select(event_name, items) |> # unnamed list
+  unnest_longer(items) |> # tibble: 1 × 2 named list
+  unnest_wider(items) # tibble: 1 × 27
 ```
 
 > The pipeline for an array of named structs:
 
-```         
+```{{r}}         
 items (list-column of tibbles)
   └─ unnest_longer(items)  → one row per item, items column now a single tibble-row
        └─ unnest_wider(items)  → each item field becomes its own column
@@ -567,7 +572,7 @@ items (list-column of tibbles)
 ```{r}
 #| label: unnest-items
 
-items_flat <- ga4_raw |>
+items_flat <- ga4 |>
   filter(event_name == "purchase") |>
   select(event_date, user_pseudo_id, event_timestamp, items) |>
   unnest_longer(items) |> # Step 1: one row per item
@@ -618,27 +623,31 @@ items_flat |>
 
 ## Pattern 1b: `hoist()` for Selective Extraction {#hoist}
 
-When you only need **a few fields** from a large struct, `hoist()` is more efficient than a full unnest because it avoids creating columns you don't need.
+> When you only need **a few fields** from a large struct, `hoist()` is more efficient than a full unnest because it avoids creating columns you don't need.
 
 ::: callout-note
 ## R4DS Coverage
 
-`hoist()` is covered in R4DS Section 23.4. The syntax differs slightly from `unnest_wider()` — you name the output columns and specify the path to each value.
+> `hoist()` is covered in R4DS Section 23.4. The syntax differs slightly from `unnest_wider()` 
+>
+> You name the output columns and specify the path to each value.
 :::
 
 ```{r}
 #| label: hoist-example
 
 # Extract only country and device category without unnesting everything
-ga4_targeted <- ga4_raw |>
+ga4_targeted <- ga4 |>
   select(event_name, event_date, user_pseudo_id, device, geo) |>
+  #unnest_wider(device)
   hoist(device, device_category = "category", browser = "browser") |>
+  #unnest_wider(geo)
   hoist(geo, country = "country", city = "city")
 
 glimpse(ga4_targeted)
 ```
 
-`hoist()` leaves the original list-columns in place (now with the extracted fields removed). This is useful when you want to keep the nested column for later processing while also having quick access to the most important fields.
+> `hoist()` leaves the original list-columns in place (now with the extracted fields removed). This is useful when you want to keep the nested column for later processing while also having quick access to the most important fields.
 
 ------------------------------------------------------------------------
 

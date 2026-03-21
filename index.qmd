@@ -13,6 +13,8 @@ listing:
     categories: true  # ← makes category tags clickable filters
 ---
 
+## Introduction
+
 A practical guide to downloading, storing, and analyzing Google Analytics 4 
 event data using modern R tools — from BigQuery extraction to high-performance 
 local analysis.
