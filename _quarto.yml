@@ -6,7 +6,7 @@ project:
     - "!draft-*.qmd"
 
 website: 
-  title: "Analyzing GA4 Data in R"
+  title: "Unnesting GA4 Data"
   navbar: 
     left: 
       - href: index.qmd

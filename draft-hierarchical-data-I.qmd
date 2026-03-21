@@ -3,7 +3,7 @@ title: "Rectangling Hierarchical Data: Part I"
 subtitle: "R4DS Chapter 23 Concepts Applied to Google Analytics 4 in BigQuery"
 description: "This page discusses pros and cons of various methods of working with GA4 data in R by considering file sizes - small data (a week) vs. large data (many months)"
 categories: [BigQuery, Arrow, Parquet, DuckDB, SQL]
-order: 4
+order: 2
 author: "Jae Jung"
 date: today
 format:

@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>GA4 Analytics Engineering with R, Arrow &amp; DuckDB &amp; Parquet – Analyzing GA4 Data in R</title>
+<title>GA4 Analytics Engineering with R, Arrow &amp; DuckDB &amp; Parquet – Unnesting GA4 Data</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -82,7 +82,7 @@ ul.task-list li input[type="checkbox"] {
     const options = {
       valueNames: ['listing-title','listing-description','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
       
-      searchColumns: ["listing-title","listing-author","listing-date","listing-image","listing-description"],
+      searchColumns: ["listing-title","listing-author","listing-date","listing-image","listing-description","listing-categories"],
     };
 
     window['quarto-listings'] = window['quarto-listings'] || {};
@@ -140,7 +140,7 @@ window.Quarto = {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="./index.html">
-    <span class="navbar-title">Analyzing GA4 Data in R</span>
+    <span class="navbar-title">Unnesting GA4 Data</span>
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -208,7 +208,7 @@ window.Quarto = {
   <li><a href="#tools" id="toc-tools" class="nav-link active" data-scroll-target="#tools">Tools</a></li>
   </ul>
 </nav>
-    </div>
+    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(3)</span></div><div class="category" data-category="QXJyb3c=">Arrow <span class="quarto-category-count">(2)</span></div><div class="category" data-category="QmlnUXVlcnk=">BigQuery <span class="quarto-category-count">(2)</span></div><div class="category" data-category="RHVja0RC">DuckDB <span class="quarto-category-count">(2)</span></div><div class="category" data-category="SlNPTg==">JSON <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UGFycXVldA==">Parquet <span class="quarto-category-count">(2)</span></div><div class="category" data-category="U1FM">SQL <span class="quarto-category-count">(2)</span></div><div class="category" data-category="dGlkeXI=">tidyr <span class="quarto-category-count">(1)</span></div><div class="category" data-category="dGlkeXZlcnNl">tidyverse <span class="quarto-category-count">(1)</span></div></div></div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -235,13 +235,19 @@ window.Quarto = {
 <p>A practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis.</p>
 <section id="tools" class="level2">
 <h2 class="anchored" data-anchor-id="tools">Tools</h2>
-<p><code>R</code> · <code>Quarto</code> · <code>bigrquery</code> · <code>arrow</code> · <code>duckdb</code> · <code>dplyr</code> · <code>purrr</code></p>
+<p><code>R</code> · <code>tidyr</code> · <code>tidyverse</code> · <code>JSON</code> · <code>Quarto</code> · <code>bigrquery</code> · <code>arrow</code> · <code>duckdb</code> · <code>dplyr</code> · <code>purrr</code></p>
 
 
 
 </section>
 
 <div class="quarto-listing quarto-listing-container-grid" id="listing-listing">
+<div class="listing-actions-group">
+    <div class="input-group input-group-sm quarto-listing-filter">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" class="search form-control" placeholder="Filter">
+    </div>
+</div>
 <div class="list grid quarto-listing-cols-3">
 <div class="g-col-1" data-index="0" data-categories="dGlkeXIlMkNKU09OJTJDdGlkeXZlcnNl" data-listing-date-sort="1773990000000" data-listing-file-modified-sort="1774001634119" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="12" data-listing-word-count-sort="2308">
 <a href="./hierarchical-data-0.html" class="quarto-grid-link">
@@ -265,7 +271,7 @@ Rectangling Hierarchical Data
 </div>
 </div></a>
 </div>
-<div class="g-col-1" data-index="1" data-categories="QmlnUXVlcnklMkNBcnJvdyUyQ1BhcnF1ZXQlMkNEdWNrREIlMkNTUUw=" data-listing-date-sort="1773990000000" data-listing-file-modified-sort="1773821402363" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="12" data-listing-word-count-sort="2288">
+<div class="g-col-1" data-index="1" data-categories="QmlnUXVlcnklMkNBcnJvdyUyQ1BhcnF1ZXQlMkNEdWNrREIlMkNTUUw=" data-listing-date-sort="1773990000000" data-listing-file-modified-sort="1774071335951" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="12" data-listing-word-count-sort="2288">
 <a href="./ga4_bigquery_analysis.html" class="quarto-grid-link">
 <div class="quarto-grid-item card h-100 card-left">
 <div class="card-body post-contents">
@@ -291,7 +297,7 @@ GA4 BigQuery Analysis with Arrow &amp; DuckDB
 </div>
 </div></a>
 </div>
-<div class="g-col-1" data-index="2" data-categories="QmlnUXVlcnklMkNBcnJvdyUyQ1BhcnF1ZXQlMkNEdWNrREIlMkNTUUw=" data-listing-date-sort="1773990000000" data-listing-file-modified-sort="1774001655512" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="5" data-listing-word-count-sort="923">
+<div class="g-col-1" data-index="2" data-categories="QmlnUXVlcnklMkNBcnJvdyUyQ1BhcnF1ZXQlMkNEdWNrREIlMkNTUUw=" data-listing-date-sort="1773990000000" data-listing-file-modified-sort="1774070888169" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="5" data-listing-word-count-sort="923">
 <a href="./Ga4-R-Methods-Guide.html" class="quarto-grid-link">
 <div class="quarto-grid-item card h-100 card-left">
 <div class="card-body post-contents">

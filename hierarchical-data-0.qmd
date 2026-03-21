@@ -1,5 +1,5 @@
 ---
-title: "Rectangling Hierarchical Data"
+title: "Rectangling Hierarchical Data: Ch23"
 subtitle: "Summary of the Fundamentals of unnesting list-columns explained in Ch23, RDDS"
 description: "This page summarizes the fundamental concepts about hierarchal data and how to flatten it"
 categories: [tidyr, JSON, tidyverse]

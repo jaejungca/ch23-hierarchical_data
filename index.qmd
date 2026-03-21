@@ -9,6 +9,8 @@ listing:
     type: grid
     fields: [title, description, categories]
     sort: "order"
+    filter-ui: true   # ← adds a search/filter
+    categories: true  # ← makes category tags clickable filters
 ---
 
 A practical guide to downloading, storing, and analyzing Google Analytics 4 
@@ -17,4 +19,4 @@ local analysis.
 
 ## Tools
 
-`R` · `Quarto` · `bigrquery` · `arrow` · `duckdb` · `dplyr` · `purrr`
+`R` · `tidyr` · `tidyverse` · `JSON` · `Quarto` · `bigrquery` · `arrow` · `duckdb` · `dplyr` · `purrr`
