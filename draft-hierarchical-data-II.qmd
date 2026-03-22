@@ -1,8 +1,8 @@
 ---
-title: "Rectangling Hierarchical Data"
-subtitle: "R4DS Chapter 23 Concepts Applied to Google Analytics 4 in BigQuery"
-description: "This page discusses pros and cons of various methods of working with GA4 data in R by considering file sizes - small data (a week) vs. large data (many months)"
-categories: [BigQuery, Arrow, Parquet, DuckDB, SQL]
+title: "Rectangling GA4 Hierarchical Data "
+subtitle: "Answering Marketing Questions"
+description: "This document bridges R for Data Science Chapter 23 (Rectangling) and the real-world complexity of Google Analytics 4 (GA4) data stored in BigQuery. You will learn to transform deeply nested, hierarchical event data into flat, analysis-ready tables"
+categories: [bigrquery, Arrow, Parquet, DuckDB, Duckplyr, SQL]
 order: 5
 author: "Jae Jung"
 date: today
