@@ -21,402 +21,6 @@
     "text": "Tools\nR · tidyr · tidyverse · JSON · Quarto · bigrquery · arrow · duckdb · dplyr · purrr"
   },
   {
-    "objectID": "hierarchical-data-0.html",
-    "href": "hierarchical-data-0.html",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "",
-    "text": "1 What is data rectangling?\n  \n  1.1 Packages to use\n  \n  2 Lists\n  \n  2.1 Hierarchy\n  2.2 List-Columns\n  \n  3 Unnesting\n  \n  3.1 Named list-columns\n  3.2 Unnamed list-columns\n  3.3 unnest_wider()\n  3.4 unnest_longer()\n  3.5 Inconsitent Types\n  3.6 Other functions from tidyr\n  3.7 Exercises\n  \n  4 Case Studies\n  \n  4.1 Very wide data\n  4.2 Relational data\n  4.3 Deeply nested\n  4.4 What Is hoist()?\n  4.5 Exercises\n  \n  5 JSON\n  \n  5.1 Data Types\n  5.2 jsonlite\n  5.3 Starting the rectangling process\n  \n  6 Reference",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#packages-to-use",
-    "href": "hierarchical-data-0.html#packages-to-use",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "1.1 Packages to use",
-    "text": "1.1 Packages to use\n\n\nCode\n#install.packages(\"repurrrsive\")\nlibrary(tidyverse)\nlibrary(repurrrsive)\nlibrary(jsonlite)",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#hierarchy",
-    "href": "hierarchical-data-0.html#hierarchy",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "2.1 Hierarchy",
-    "text": "2.1 Hierarchy\n\n\nLists can contain any type of object, including other lists.\nThis makes them suitable for representing hierarchical (tree-like) structures:\n\n\n\n\nCode\nx3 &lt;- list(list(1, 2), list(3, 4))\nstr(x3)\n\n\nList of 2\n $ :List of 2\n  ..$ : num 1\n  ..$ : num 2\n $ :List of 2\n  ..$ : num 3\n  ..$ : num 4\n\n\n\n\nThis is notably different to c(), which generates a flat vector:\n\n\n\n\nCode\nc(c(1, 2), c(3, 4))\n\n\n[1] 1 2 3 4\n\n\n\n\nCode\nx5 &lt;- list(1, list(2, list(3, list(4, list(5)))))\nstr(x5)\n\n\nList of 2\n $ : num 1\n $ :List of 2\n  ..$ : num 2\n  ..$ :List of 2\n  .. ..$ : num 3\n  .. ..$ :List of 2\n  .. .. ..$ : num 4\n  .. .. ..$ :List of 1\n  .. .. .. ..$ : num 5\n\n\nCode\nview(x5)",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#list-columns",
-    "href": "hierarchical-data-0.html#list-columns",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "2.2 List-Columns",
-    "text": "2.2 List-Columns\n\n\nCode\ndf &lt;- tibble(\n  x = 1:2,\n  y = c(\"a\", \"b\"),\n  z = list(list(1, 2), list(3, 4, 5))\n)\ndf\n\n\n\n  \n\n\n\n\n\nCode\ndf |&gt;\n  filter(x == 1)\n\n\n\n  \n\n\n\n\n\nComputing with list-columns is harder.\n\n\n\n\ntibble() treats lists like vectors and the print method has been designed with lists in mind.",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#named-list-columns",
-    "href": "hierarchical-data-0.html#named-list-columns",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "3.1 Named list-columns",
-    "text": "3.1 Named list-columns\n\n\nNamed list-columns naturally unnest into columns: each named element becomes a new named column.\n\n\n\n\nCode\ndf1 &lt;- tribble(\n  ~x , ~y                   ,\n   1 , list(a = 11, b = 12) ,\n   2 , list(a = 21, b = 22) ,\n   3 , list(a = 31, b = 32) ,\n)\ndf1",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#unnamed-list-columns",
-    "href": "hierarchical-data-0.html#unnamed-list-columns",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "3.2 Unnamed list-columns",
-    "text": "3.2 Unnamed list-columns\n\n\nWhen the children are unnamed, the number of elements tends to vary from row-to-row.\n\n\n\n\nUnnamed list-columns naturally unnest into rows: you’ll get one row for each child.\n\n\n\n\nCode\ndf2 &lt;- tribble(\n  ~x , ~y               ,\n   1 , list(11, 12, 13) ,\n   2 , list(21)         ,\n   3 , list(31, 32)     ,\n)",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#unnest_wider",
-    "href": "hierarchical-data-0.html#unnest_wider",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "3.3 unnest_wider()",
-    "text": "3.3 unnest_wider()\n\nUsed when each row has the same number of elements with the same names\n\n\n\nCode\ndf1 |&gt;\n  unnest_wider(y)\n\n\n\n  \n\n\n\n\nBy default, the names of the new columns come exclusively from the names of the list elements, but you can use the names_sep argument to request that they combine the column name and the element name. This is useful for disambiguating repeated names.\n\n\n\nCode\ndf1 |&gt;\n  unnest_wider(y, names_sep = \"_\")",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#unnest_longer",
-    "href": "hierarchical-data-0.html#unnest_longer",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "3.4 unnest_longer()",
-    "text": "3.4 unnest_longer()\n\nUsed when each row contains an unnamed list\n\n\n\nCode\ndf2 |&gt;\n  unnest_longer(y)\n\n\n\n  \n\n\n\n\nNote how x is duplicated for each element inside of y: we get one row of output for each element inside the list-column.\n\n\nBut what happens if one of the elements is empty, as in the following example?\n\n\n\nCode\ndf6 &lt;- tribble(\n  ~x  , ~y         ,\n  \"a\" , list(1, 2) ,\n  \"b\" , list(3)    ,\n  \"c\" , list()\n)\n\ndf6 |&gt;\n  unnest_longer(y)\n\n\n\n  \n\n\n\n\nWe get zero rows in the output, so the row effectively disappears.\n\n\nIf you want to preserve that row, adding NA in y, set keep_empty = TRUE.\n\n\n\nCode\ndf6 &lt;- tribble(\n  ~x  , ~y         ,\n  \"a\" , list(1, 2) ,\n  \"b\" , list(3)    ,\n  \"c\" , list(NA)\n)\n\ndf6 |&gt;\n  unnest_longer(y, keep_empty = TRUE)",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#inconsitent-types",
-    "href": "hierarchical-data-0.html#inconsitent-types",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "3.5 Inconsitent Types",
-    "text": "3.5 Inconsitent Types\n\nWhat happens if you unnest a list-column that contains different types of vector?\n\n\n\nCode\ndf4 &lt;- tribble(\n  ~x  , ~y                 ,\n  \"a\" , list(1)            ,\n  \"b\" , list(\"a\", TRUE, 5)\n)\n\n\n\n\nCode\ndf4 |&gt;\n  unnest_longer(y)\n\n\n\n  \n\n\n\n\nThe output contains a list-column, but every element of the list-column contains a single element.\n\n\nDealing with inconsistent types is challenging and the details depend on the precise nature of the problem and your goals, but you’ll most likely need tools from Iteration.",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#other-functions-from-tidyr",
-    "href": "hierarchical-data-0.html#other-functions-from-tidyr",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "3.6 Other functions from tidyr",
-    "text": "3.6 Other functions from tidyr\n\nunnest_auto() automatically picks between unnest_longer() and unnest_wider() based on the structure of the list-column. It’s great for rapid exploration, but ultimately it’s a bad idea because it doesn’t force you to understand how your data is structured, and makes your code harder to understand.\nunnest() expands both rows and columns. It’s useful when you have a list-column that contains a 2d structure like a data frame, which you don’t see in this book, but you might encounter if you use the tidymodels ecosystem.",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#exercises",
-    "href": "hierarchical-data-0.html#exercises",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "3.7 Exercises",
-    "text": "3.7 Exercises\n\nWhat happens when you use unnest_wider() with unnamed list-columns like df2? What argument is now necessary? What happens to missing values?\nWhat happens when you use unnest_longer() with named list-columns like df1? What additional information do you get in the output? How can you suppress that extra detail?\nFrom time-to-time you encounter data frames with multiple list-columns with aligned values. For example, in the following data frame, the values of y and z are aligned (i.e. y and z will always have the same length within a row, and the first value of y corresponds to the first value of z). What happens if you apply two unnest_longer() calls to this data frame? How can you preserve the relationship between x and y? (Hint: carefully read the docs).\n\n\n\nCode\ndf4 &lt;- tribble(\n  ~x  , ~y                              , ~z                              ,\n  \"a\" , list(\"y-a-1\", \"y-a-2\")          , list(\"z-a-1\", \"z-a-2\")          ,\n  \"b\" , list(\"y-b-1\", \"y-b-2\", \"y-b-3\") , list(\"z-b-1\", \"z-b-2\", \"z-b-3\")\n)",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#very-wide-data",
-    "href": "hierarchical-data-0.html#very-wide-data",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "4.1 Very wide data",
-    "text": "4.1 Very wide data\n\ngh_repos. This is a list that contains data about a collection of GitHub repositories retrieved using the GitHub API.\n\n\n\nCode\nlibrary(repurrrsive)\n#view(gh_repos)\n\nrepos &lt;- tibble(json = gh_repos)\nrepos\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json)\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  names() |&gt;\n  head(10)\n\n\n [1] \"id\"          \"name\"        \"full_name\"   \"owner\"       \"private\"    \n [6] \"html_url\"    \"description\" \"fork\"        \"url\"         \"forks_url\"  \n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, full_name, owner, description)\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, full_name, owner, description) |&gt;\n  unnest_wider(owner)\n\n\nOutput:\nError in `unnest_wider()` at w09-hierarchical-data/ch23/draft-hierarchical-data-0.qmd:301:1:\n! Can't duplicate names between the affected columns and the original data.\n✖ These names are duplicated:\n  ℹ `id`, from `owner`.\nℹ Use `names_sep` to disambiguate using the column name.\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, full_name, owner, description) |&gt;\n  unnest_wider(owner, names_sep = \"_\")",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#relational-data",
-    "href": "hierarchical-data-0.html#relational-data",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "4.2 Relational data",
-    "text": "4.2 Relational data\n\nNested data is sometimes used to represent data that we’d usually spread across multiple data frames.\n\n\nExample: got_chars which contains data about characters that appear in the Game of Thrones books and TV series.\n\n\n\nCode\nchars &lt;- tibble(json = got_chars)\nchars\n\n\n\n  \n\n\n\nCode\n# Widening\nchars |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\nCode\n# selecting a few\nchars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, name, gender, culture, born, died, alive)\n\n\n\n  \n\n\n\nCode\n# search for list-columns\nchars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, where(is.list))\n\n\n\n  \n\n\n\nCode\n# explore titles column\nchars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, titles) |&gt;\n  unnest_longer(titles)\n\n\n\n  \n\n\n\nCode\n# cleanning\ntitles &lt;- chars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, titles) |&gt;\n  unnest_longer(titles) |&gt;\n  filter(titles != \"\") |&gt;\n  rename(title = titles)\n\ntitles\n\n\n\n  \n\n\n\n\nYou could imagine creating a table like this for each of the list-columns, then using joins to combine them with the character data as you need it.",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#deeply-nested",
-    "href": "hierarchical-data-0.html#deeply-nested",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "4.3 Deeply nested",
-    "text": "4.3 Deeply nested\n\nWhen the data is very deeply nested and requires repeated rounds of unnest_wider() and unnest_longer() to unravel: gmaps_cities.\n\n\n\nCode\ngmaps_cities\n\n\n\n  \n\n\n\n\n\nCode\ngmaps_cities |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\n\n\nDrop the status column since they’re all OK\n\n\n\n\nUnnamed list\n\n\n\n\nCode\ngmaps_cities |&gt;\n  unnest_wider(json) |&gt;\n  select(-status) |&gt;\n  unnest_longer(results)\n\n\n\n  \n\n\n\n\nNow results is a named list, so we’ll use unnest_wider():\n\n\n\nCode\nlocations &lt;- gmaps_cities |&gt;\n  unnest_wider(json) |&gt;\n  select(-status) |&gt;\n  unnest_longer(results) |&gt;\n  unnest_wider(results)\n\nlocations\n\n\n\n  \n\n\n\n\nThere are a few different places we could go from here. We might want to determine the exact location of the match, which is stored in the geometry list-column:\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry)\n\n\n\n  \n\n\n\n\nWe can unnest location to see the latitude (lat) and longitude (lng):\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry) |&gt;\n  unnest_wider(location)\n\n\n\n  \n\n\n\n\nExtracting the bounds requires a few more steps:\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry) |&gt;\n  # focus on the variables of interest\n  select(!location:viewport) |&gt;\n  unnest_wider(bounds)\n\n\n\n  \n\n\n\n\nWe then rename southwest and northeast (the corners of the rectangle) so we can use names_sep to create short but evocative names:\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry) |&gt;\n  select(!location:viewport) |&gt;\n  unnest_wider(bounds) |&gt;\n  rename(ne = northeast, sw = southwest) |&gt;\n  unnest_wider(c(ne, sw), names_sep = \"_\")\n\n\n\n  \n\n\n\n\nOnce you’ve discovered the path to get to the components you’re interested in, you can extract them directly using another tidyr function, hoist():\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  hoist(\n    geometry,\n    ne_lat = c(\"bounds\", \"northeast\", \"lat\"),\n    sw_lat = c(\"bounds\", \"southwest\", \"lat\"),\n    ne_lng = c(\"bounds\", \"northeast\", \"lng\"),\n    sw_lng = c(\"bounds\", \"southwest\", \"lng\"),\n  )",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#what-is-hoist",
-    "href": "hierarchical-data-0.html#what-is-hoist",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "4.4 What Is hoist()?",
-    "text": "4.4 What Is hoist()?\nhoist() is a function from {tidyr} that lets you pull specific elements out of a list-column by name or position, without unnesting the entire structure. Think of it as a surgical tool compared to the blunt instruments of unnest_wider() and unnest_longer()",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#exercises-1",
-    "href": "hierarchical-data-0.html#exercises-1",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "4.5 Exercises",
-    "text": "4.5 Exercises\n\nRoughly estimate when gh_repos was created. Why can you only roughly estimate the date?\nThe owner column of gh_repos contains a lot of duplicated information because each owner can have many repos. Can you construct an owners data frame that contains one row for each owner? (Hint: does distinct() work with list-cols?)\nFollow the steps used for titles to create similar tables for the aliases, allegiances, books, and TV series for the Game of Thrones characters.\nExplain the following code line-by-line. Why is it interesting? Why does it work for got_chars but might not work in general?\n\n\n\nCode\ntibble(json = got_chars) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, where(is.list)) |&gt;\n  pivot_longer(\n    where(is.list),\n    names_to = \"name\",\n    values_to = \"value\"\n  ) |&gt;\n  unnest_longer(value)\n\n\n\n  \n\n\n\n\nIn gmaps_cities, what does address_components contain? Why does the length vary between rows? Unnest it appropriately to figure it out. (Hint: types always appears to contain two elements. Does unnest_wider() make it easier to work with than unnest_longer()?) .",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#data-types",
-    "href": "hierarchical-data-0.html#data-types",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "5.1 Data Types",
-    "text": "5.1 Data Types\nIt has six key data types. Four of them are scalars:\n\nThe simplest type is a null (null) which plays the same role as NA in R. It represents the absence of data.\nA string is much like a string in R, but must always use double quotes.\nA number is similar to R’s numbers: they can use integer (e.g., 123), decimal (e.g., 123.45), or scientific (e.g., 1.23e3) notation. JSON doesn’t support Inf, -Inf, or NaN.\nA boolean is similar to R’s TRUE and FALSE, but uses lowercase true and false.\n\nTo represent multiple values you need to use one of the two remaining types: arrays and objects.\n\nBoth arrays and objects are similar to lists in R; the difference is whether or not they’re named.\n\nAn array is like an unnamed list, and is written with []. For example [1, 2, 3] is an array containing 3 numbers, and [null, 1, \"string\", false] is an array that contains a null, a number, a string, and a boolean.\nAn object is like a named list, and is written with {}. The names (keys in JSON terminology) are strings, so must be surrounded by quotes. For example, {\"x\": 1, \"y\": 2} is an object that maps x to 1 and y to 2.",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#jsonlite",
-    "href": "hierarchical-data-0.html#jsonlite",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "5.2 jsonlite",
-    "text": "5.2 jsonlite\n\nThis package convert JSON into R data structures\nread_json() and parse_json(). \n\n\n\nCode\n# A path to a json file inside the package:\ngh_users_json()\n\n\n[1] \"C:/Users/jmjung/AppData/Local/Programs/R/R-4.5.2/library/repurrrsive/extdata/gh_users.json\"\n\n\nCode\n#&gt; [1] \"/home/runner/work/_temp/Library/repurrrsive/extdata/gh_users.json\"\n\n# Read it with read_json()\ngh_users2 &lt;- read_json(gh_users_json())\n\n# Check it's the same as the data we were using previously\nidentical(gh_users, gh_users2)\n\n\n[1] TRUE\n\n\nCode\n#&gt; [1] TRUE\n\n\n\n\nCode\nstr(parse_json(\"1\"))\n\n\n int 1\n\n\n\n\nCode\nstr(parse_json('[1, 2, 3]')) # array\n\n\nList of 3\n $ : int 1\n $ : int 2\n $ : int 3\n\n\n\n\nCode\nstr(parse_json('{\"x\": [1, 2, 3]}')) # object\n\n\nList of 1\n $ x:List of 3\n  ..$ : int 1\n  ..$ : int 2\n  ..$ : int 3",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "hierarchical-data-0.html#starting-the-rectangling-process",
-    "href": "hierarchical-data-0.html#starting-the-rectangling-process",
-    "title": "Rectangling Hierarchical Data: Ch23",
-    "section": "5.3 Starting the rectangling process",
-    "text": "5.3 Starting the rectangling process\n\nIn most cases, JSON files contain a single top-level array\n\n\n\nCode\njson &lt;- '[\n  {\"name\": \"John\", \"age\": 34},\n  {\"name\": \"Susan\", \"age\": 27}\n]'\n\ndf &lt;- tibble(json = parse_json(json))\ndf\n\n\n\n  \n\n\n\n\n\nCode\ndf |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\n\nIn rarer cases, the JSON file consists of a single top-level JSON object, representing one “thing”. In this case, you’ll need to kick off the rectangling process by wrapping it in a list, before you put it in a tibble.\n\n\n\nCode\njson &lt;- '{\n  \"status\": \"OK\", \n  \"results\": [\n    {\"name\": \"John\", \"age\": 34},\n    {\"name\": \"Susan\", \"age\": 27}\n ]\n}\n'\ndf &lt;- tibble(json = list(parse_json(json)))\ndf\n\n\n\n  \n\n\n\n\n\nCode\ndf |&gt;\n  unnest_wider(json) |&gt;\n  unnest_longer(results) |&gt;\n  unnest_wider(results)\n\n\n\n  \n\n\n\n\nAlternatively, you can reach inside the parsed JSON and start with the bit that you actually care about:\n\n\n\nCode\ndf &lt;- tibble(results = parse_json(json)$results)\ndf |&gt;\n  unnest_wider(results)",
-    "crumbs": [
-      "Home",
-      "Rectangling Hierarchical Data: Ch23"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html",
-    "href": "Ga4-R-Methods-Guide.html",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "",
-    "text": "1 Comparisoon of Various Methods\n  \n  1.1 Small GA4 Project (&lt; 7 days)\n  \n  1.1.1 A few things worth highlighting from the table:\n  \n  1.2 Large GA4 Data (90 days)\n  \n  1.2.1 The three key shifts from the 7-day analysis are:\n  \n  \n  2 Recommended Workflow for Large GA4 Data\n  \n  2.1 Step 1: Install packages\n  2.2 Step 2: Download from BigQuery once, save as partitioned Parquet\n  2.3 Step 3: Connect DuckDB to the Parquet files\n  2.4 Step 4: Query as needed\n  2.5 Step 5: Close the connection when done",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html#small-ga4-project-7-days",
-    "href": "Ga4-R-Methods-Guide.html#small-ga4-project-7-days",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "1.1 Small GA4 Project (< 7 days)",
-    "text": "1.1 Small GA4 Project (&lt; 7 days)\nFor your current 7-day project, RDS alone is enough. As you scale up or start wanting SQL-style queries, DuckDB + Parquet is the most powerful pairing — DuckDB queries the Parquet files directly without even needing to load them first.\n\n\n1.1.1 A few things worth highlighting from the table:\nThe nested column problem is the deciding factor for GA4 specifically. RDS and DuckDB both handle event_params, device, and geo as-is, while raw Parquet forces you to flatten them first (which is where all that purrr complexity came from).\nDuckDB + Parquet is the best long-term investment because DuckDB can query Parquet files on disk directly with a single line — duckdb::duckdb_read_csv() or FROM read_parquet('data/*.parquet') — meaning you get the storage efficiency of Parquet without writing Arrow query pipelines.\nFor your current 7-day project, RDS wins on simplicity. But if you plan to scale to months of GA4 data, switching to DuckDB early costs very little effort and will save you a lot of pain later.",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html#large-ga4-data-90-days",
-    "href": "Ga4-R-Methods-Guide.html#large-ga4-data-90-days",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "1.2 Large GA4 Data (90 days)",
-    "text": "1.2 Large GA4 Data (90 days)\n\n\n1.2.1 The three key shifts from the 7-day analysis are:\nRDS is now off the table. At 3 months, you’re likely looking at 3–10M rows and 500MB–2GB of raw data. Loading that entirely into RAM on every session is slow, risks crashing R with an out-of-memory error, and gives you no ability to query just a slice of the data.\nDuckDB alone becomes marginal. A .duckdb file is a single binary blob — you can’t selectively read January without touching February and March. It’s fine for medium data but loses its edge at this scale.\nDuckDB + Parquet is the clear winner, and the setup is simpler than it sounds. You save once as date-partitioned Parquet files, then DuckDB reads them directly on disk:\n```{r}\nlibrary(duckdb)\ncon &lt;- dbConnect(duckdb())\n\n# DuckDB reads Parquet files directly — no loading into R first\ndbGetQuery(con, \"\n  SELECT\n    event_date,\n    event_name,\n    ep.value.string_value AS page_location\n  FROM read_parquet('data/ga4_parquet/**/*.parquet', hive_partitioning = true)\n  CROSS JOIN UNNEST(event_params) AS ep(key, value)\n  WHERE event_date BETWEEN '20210101' AND '20210131'\n    AND ep.key = 'page_location'\n\")\n```\n\n\n\n\n\n\nThree things make this powerful at your scale: the hive_partitioning = true flag means DuckDB skips entire month folders when your WHERE clause doesn’t need them; UNNEST handles the nested GA4 columns without any upfront flattening; and nothing is loaded into R memory until dbGetQuery() returns the final filtered result.",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html#step-1-install-packages",
-    "href": "Ga4-R-Methods-Guide.html#step-1-install-packages",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "2.1 Step 1: Install packages",
-    "text": "2.1 Step 1: Install packages\n```{r}\ninstall.packages(c(\"bigrquery\", \"duckdb\", \"arrow\", \"dplyr\"))\n```",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html#step-2-download-from-bigquery-once-save-as-partitioned-parquet",
-    "href": "Ga4-R-Methods-Guide.html#step-2-download-from-bigquery-once-save-as-partitioned-parquet",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "2.2 Step 2: Download from BigQuery once, save as partitioned Parquet",
-    "text": "2.2 Step 2: Download from BigQuery once, save as partitioned Parquet\nDo this once only. All future analysis reads from local Parquet files.\n```{r}\nlibrary(bigrquery)\nlibrary(arrow)\nlibrary(dplyr)\n\nbilling_project &lt;- \"your-project-id\"\n\n# Download in monthly chunks to avoid memory pressure\nmonths &lt;- list(\n  c(\"20210101\", \"20210131\"),\n  c(\"20210201\", \"20210228\"),\n  c(\"20210301\", \"20210331\")\n)\n\ndir.create(\"data/ga4_parquet\", recursive = TRUE, showWarnings = FALSE)\n\nfor (m in months) {\n  message(\"Downloading \", m[1], \" to \", m[2], \"...\")\n  \n  result &lt;- bq_project_query(billing_project, glue::glue(\"\n    SELECT\n      event_date, event_timestamp, event_name,\n      event_params, user_pseudo_id,\n      device, geo, traffic_source, ecommerce, items\n    FROM `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`\n    WHERE _TABLE_SUFFIX BETWEEN '{m[1]}' AND '{m[2]}'\n  \"))\n  \n  chunk &lt;- bq_table_download(result, bigint = \"numeric\", page_size = 1000)\n  \n  # Write directly to partitioned Parquet — Arrow infers event_date partition\n  chunk |&gt;\n    group_by(event_date) |&gt;\n    write_dataset(\"data/ga4_parquet\", format = \"parquet\")\n  \n  rm(chunk); gc()  # free memory between chunks\n}\n```\n\nYour folder structure will look like:\n\ndata/ga4_parquet/\n  event_date=20210101/part-0.parquet\n  event_date=20210102/part-0.parquet\n  ...",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html#step-3-connect-duckdb-to-the-parquet-files",
-    "href": "Ga4-R-Methods-Guide.html#step-3-connect-duckdb-to-the-parquet-files",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "2.3 Step 3: Connect DuckDB to the Parquet files",
-    "text": "2.3 Step 3: Connect DuckDB to the Parquet files\nAt the start of every future session, just run this — no re-downloading, no loading into RAM:\n```{r}\nlibrary(duckdb)\nlibrary(DBI)\n\ncon &lt;- dbConnect(duckdb())\n\n# Register the entire partitioned dataset as a virtual table\ndbExecute(con, \"\n  CREATE VIEW ga4 AS\n  SELECT * FROM read_parquet(\n    'data/ga4_parquet/**/*.parquet',\n    hive_partitioning = true\n  )\n\")\n```\nFrom here, ga4 behaves like a database table. DuckDB reads only the Parquet partitions your query needs.",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html#step-4-query-as-needed",
-    "href": "Ga4-R-Methods-Guide.html#step-4-query-as-needed",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "2.4 Step 4: Query as needed",
-    "text": "2.4 Step 4: Query as needed\nFlat columns — standard SQL:\n```{r}\n# Only touches January partitions on disk\ndbGetQuery(con, \"\n  SELECT event_date, event_name, COUNT(*) AS n\n  FROM ga4\n  WHERE event_date BETWEEN '20210101' AND '20210131'\n  GROUP BY 1, 2\n  ORDER BY 3 DESC\n\")\n```\nNested columns — use UNNEST in SQL:\n```{r}\n# Extract page_location from event_params without any upfront flattening\ndbGetQuery(con, \"\n  SELECT\n    event_date,\n    user_pseudo_id,\n    ep.value.string_value AS page_location\n  FROM ga4\n  CROSS JOIN UNNEST(event_params) AS ep(key, value)\n  WHERE event_name = 'page_view'\n    AND ep.key = 'page_location'\n    AND event_date BETWEEN '20210101' AND '20210131'\n\")\n```\nDevice and geo nested fields:\n```{r}\ndbGetQuery(con, \"\n  SELECT\n    device.category AS device_type,\n    device.operating_system AS os,\n    geo.country,\n    geo.city,\n    COUNT(DISTINCT user_pseudo_id) AS users\n  FROM ga4\n  WHERE event_date BETWEEN '20210101' AND '20210331'\n  GROUP BY 1, 2, 3, 4\n  ORDER BY 5 DESC\n\")\n```\nPurchase funnel — joining unnested params:\n```{r}\ndbGetQuery(con, \"\n  SELECT\n    event_name,\n    COUNT(DISTINCT user_pseudo_id) AS users,\n    COUNT(*)                        AS events\n  FROM ga4\n  WHERE event_name IN ('session_start','view_item','add_to_cart','purchase')\n    AND event_date BETWEEN '20210101' AND '20210331'\n  GROUP BY 1\n  ORDER BY 3 DESC\n\")\n\n```",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "Ga4-R-Methods-Guide.html#step-5-close-the-connection-when-done",
-    "href": "Ga4-R-Methods-Guide.html#step-5-close-the-connection-when-done",
-    "title": "Guideline for Working with GA4 Data in R",
-    "section": "2.5 Step 5: Close the connection when done",
-    "text": "2.5 Step 5: Close the connection when done\n```{r}\ndbDisconnect(con)\n```",
-    "crumbs": [
-      "Home",
-      "Guideline for Working with GA4 Data in R"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html",
-    "href": "ga4_bigquery_analysis.html",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "",
-    "text": "Setup\n  \n  0.1 Install & Load Packages\n  \n  1 1. Connect to BigQuery\n  2 2. Pull Data from BigQuery → Arrow Table\n  \n  2.1 2a. Date range helper\n  2.2 2b. BigQuery SQL — flatten GA4 nested structs\n  2.3 2c. Execute & capture as Arrow Table\n  \n  3 3. Register Arrow Table in DuckDB\n  4 4. Analysis with DuckDB SQL\n  \n  4.1 4a. Daily sessions & revenue\n  4.2 4b. Channel performance\n  4.3 4c. Funnel analysis\n  4.4 4d. Device breakdown\n  \n  5 5. Using dplyr on Arrow (alternative to raw SQL)\n  6 6. Save Results to Parquet (for later reuse)\n  7 7. Cleanup\n  8 Workflow Summary",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#install-load-packages",
-    "href": "ga4_bigquery_analysis.html#install-load-packages",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "0.1 Install & Load Packages",
-    "text": "0.1 Install & Load Packages\n\n\nCode\n# Run once to install required packages\ninstall.packages(c(\n  \"bigrquery\", # BigQuery connector\n  \"DBI\", # Database Interface\n  \"dplyr\", # Data manipulation\n  \"arrow\", # Apache Arrow (columnar, efficient)\n  \"duckdb\", # In-process OLAP SQL engine\n  \"ggplot2\", # Plotting\n  \"lubridate\", # Date handling\n  \"scales\", # Axis formatting\n  \"glue\" # String interpolation\n))\n\n\n\n\nCode\nlibrary(bigrquery)\nlibrary(DBI)\nlibrary(dplyr)\nlibrary(arrow)\nlibrary(duckdb)\nlibrary(tidyverse)",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#a.-date-range-helper",
-    "href": "ga4_bigquery_analysis.html#a.-date-range-helper",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "2.1 2a. Date range helper",
-    "text": "2.1 2a. Date range helper\n\n\nCode\n# Define a rolling 90-day window\n#date_end   &lt;- Sys.Date() - 1                         # yesterday\n#date_start &lt;- date_end - 89                          # 90 days back\n\ndate_end &lt;- as.Date(\"2021-01-31\")\ndate_start &lt;- as.Date(\"2021-01-01\")\n\n# Format as YYYYMMDD for BQ table suffix pattern\nbq_start &lt;- format(date_start, \"%Y%m%d\")\nbq_end &lt;- format(date_end, \"%Y%m%d\")",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#b.-bigquery-sql-flatten-ga4-nested-structs",
-    "href": "ga4_bigquery_analysis.html#b.-bigquery-sql-flatten-ga4-nested-structs",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "2.2 2b. BigQuery SQL — flatten GA4 nested structs",
-    "text": "2.2 2b. BigQuery SQL — flatten GA4 nested structs\n\nGA4 data is heavily nested (events → event_params, items, etc.). We unnest the key fields we need in SQL before pulling.\n\n\n\nCode\nlibrary(glue)\n\nsql &lt;- glue(\n  \"\n  SELECT\n    -- Session / user dims\n    PARSE_DATE('%Y%m%d', event_date) AS event_date,\n    user_pseudo_id,\n    (SELECT value.int_value\n       FROM UNNEST(event_params)\n      WHERE key = 'ga_session_id') AS session_id,\n\n    -- Traffic source\n    traffic_source.source AS source,\n    traffic_source.medium AS medium,\n    traffic_source.name AS campaign,\n\n    -- Device\n    device.category AS device_category,\n    device.operating_system AS os,\n\n    -- Geo\n    geo.country AS country,\n\n    -- Event\n    event_name,\n    event_timestamp,\n\n    -- Ecommerce (NULL for non-purchase events)\n    ecommerce.purchase_revenue AS revenue,\n    ecommerce.transaction_id AS transaction_id\n\n  FROM `{BQ_PROJECT}.{BQ_DATASET}.events_*`\n  WHERE _TABLE_SUFFIX BETWEEN '{bq_start}' AND '{bq_end}'\n    AND event_name IN (\n      'session_start', 'page_view',\n      'view_item', 'add_to_cart', 'purchase'\n    )\n\"\n)\n\ncat(sql)\n\n\nSELECT\n  -- Session / user dims\n  PARSE_DATE('%Y%m%d', event_date) AS event_date,\n  user_pseudo_id,\n  (SELECT value.int_value\n     FROM UNNEST(event_params)\n    WHERE key = 'ga_session_id') AS session_id,\n\n  -- Traffic source\n  traffic_source.source AS source,\n  traffic_source.medium AS medium,\n  traffic_source.name AS campaign,\n\n  -- Device\n  device.category AS device_category,\n  device.operating_system AS os,\n\n  -- Geo\n  geo.country AS country,\n\n  -- Event\n  event_name,\n  event_timestamp,\n\n  -- Ecommerce (NULL for non-purchase events)\n  ecommerce.purchase_revenue AS revenue,\n  ecommerce.transaction_id AS transaction_id\n\nFROM `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`\nWHERE _TABLE_SUFFIX BETWEEN '20210101' AND '20210131'\n  AND event_name IN (\n    'session_start', 'page_view',\n    'view_item', 'add_to_cart', 'purchase'\n  )",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#c.-execute-capture-as-arrow-table",
-    "href": "ga4_bigquery_analysis.html#c.-execute-capture-as-arrow-table",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "2.3 2c. Execute & capture as Arrow Table",
-    "text": "2.3 2c. Execute & capture as Arrow Table\n\n\nCode\n# Execute the query; stream results into an Arrow Table\n# arrow::read_ipc_stream() handles memory efficiently\nresult &lt;- DBI::dbGetQuery(bq_con, sql)\n\n\n\n\n\n\n\n\n\nUnfortunately, this code above led to the following error when executed.\n\nBilled: 362.81 MB\nDownloading first chunk of data.\nDownloading the remaining 629,250 rows in 63 chunks of (up to) 10,000 rows.\n                                                              \nWarning messages:\n1: In as.integer.integer64(x) : NAs produced by integer overflow\n2: In as.integer.integer64(x) : NAs produced by integer overflow\n\nFixing the problem with requring with the following way.\n\n\n\n\n\n\nCode\n# use bigrquery functions to control bigint conversion\ntbl &lt;- bigrquery::bq_project_query(GCP_PROJECT, sql) # billed 362.81 MB\nresult &lt;- bigrquery::bq_table_download(\n  tbl,\n  bigint = \"numeric\",\n  page_size = 10000\n)\nresult # A tibble: 639,250 × 13\n\n\n\n  \n\n\n\n\nContinue…\n\n\n\nCode\n# Convert to Arrow Table (columnar, faster for downstream DuckDB queries)\nga4_arrow &lt;- arrow::as_arrow_table(result) # scannable Arrow object\n\n# Disconnect from BigQuery — we don't need it anymore\ndbDisconnect(bq_con)\n\n# Quick look\nprint(ga4_arrow)\n\n\nTable\n639250 rows x 13 columns\n$event_date &lt;date32[day]&gt;\n$user_pseudo_id &lt;string&gt;\n$session_id &lt;double&gt;\n$source &lt;string&gt;\n$medium &lt;string&gt;\n$campaign &lt;string&gt;\n$device_category &lt;string&gt;\n$os &lt;string&gt;\n$country &lt;string&gt;\n$event_name &lt;string&gt;\n$event_timestamp &lt;double&gt;\n$revenue &lt;double&gt;\n$transaction_id &lt;string&gt;\n\n\n\nTip — very large datasets: If the dataset exceeds available RAM, write it to Parquet first and query the files directly with DuckDB:\narrow::write_parquet(ga4_arrow, \"ga4_data.parquet\")\n# Then use duckdb::duckdb_register_arrow() or read_parquet() in SQL",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#a.-daily-sessions-revenue",
-    "href": "ga4_bigquery_analysis.html#a.-daily-sessions-revenue",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "4.1 4a. Daily sessions & revenue",
-    "text": "4.1 4a. Daily sessions & revenue\n\n\nCode\ndaily &lt;- dbGetQuery(\n  duck,\n  \"\n  SELECT\n    event_date,\n    COUNT(DISTINCT CASE WHEN event_name = 'session_start'\n                        THEN user_pseudo_id || CAST(session_id AS VARCHAR)\n                   END)                           AS sessions,\n    COUNT(DISTINCT CASE WHEN event_name = 'purchase'\n                        THEN transaction_id END)  AS transactions,\n    ROUND(SUM(COALESCE(revenue, 0)), 2)           AS revenue\n  FROM ga4\n  GROUP BY event_date\n  ORDER BY event_date\n\"\n) |&gt;\n  mutate(event_date = as.Date(event_date))\n\nhead(daily)\n\n\n\n  \n\n\n\nOutput:\n&gt; head(daily)\n  event_date sessions transactions revenue\n1 2021-01-01     2289           13     975\n2 2021-01-02     2705           14    1026\n3 2021-01-03     2753           14     552\n4 2021-01-04     3317           16     834\n5 2021-01-05     4410           28    1143\n6 2021-01-06     5951           31    2000\n\n\nCode\nlibrary(scales)\n\nggplot(daily, aes(x = event_date)) +\n  geom_col(aes(y = sessions), fill = \"#4285F4\", alpha = 0.8) +\n  geom_line(\n    aes(y = revenue * max(sessions) / max(revenue)),\n    color = \"#EA4335\",\n    linewidth = 1\n  ) +\n  scale_y_continuous(\n    name = \"Sessions\",\n    labels = comma,\n    sec.axis = sec_axis(\n      ~ . * max(daily$revenue) / max(daily$sessions),\n      name = \"Revenue (USD)\",\n      labels = dollar\n    )\n  ) +\n  scale_x_date(date_labels = \"%b %d\", date_breaks = \"1 week\") +\n  labs(title = \"Daily Sessions & Revenue\", x = NULL) +\n  theme_minimal(base_size = 13) +\n  theme(axis.title.y.right = element_text(color = \"#EA4335\"))",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#b.-channel-performance",
-    "href": "ga4_bigquery_analysis.html#b.-channel-performance",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "4.2 4b. Channel performance",
-    "text": "4.2 4b. Channel performance\n\n\nCode\nchannels &lt;- dbGetQuery(\n  duck,\n  \"\n  WITH sessions AS (\n    SELECT\n      source,\n      medium,\n      user_pseudo_id || CAST(session_id AS VARCHAR) AS session_key\n    FROM ga4\n    WHERE event_name = 'session_start'\n  ),\n  purchases AS (\n    SELECT\n      source,\n      medium,\n      COUNT(DISTINCT transaction_id) AS transactions,\n      SUM(revenue)                   AS revenue\n    FROM ga4\n    WHERE event_name = 'purchase'\n    GROUP BY source, medium\n  )\n  SELECT\n    s.source,\n    s.medium,\n    COUNT(DISTINCT s.session_key)         AS sessions,\n    COALESCE(p.transactions, 0)           AS transactions,\n    ROUND(COALESCE(p.revenue, 0), 2)      AS revenue,\n    ROUND(100.0 * COALESCE(p.transactions, 0)\n          / NULLIF(COUNT(DISTINCT s.session_key), 0), 2) AS cvr_pct\n  FROM sessions s\n  LEFT JOIN purchases p USING (source, medium)\n  GROUP BY s.source, s.medium, p.transactions, p.revenue\n  ORDER BY sessions DESC\n  LIMIT 20\n\"\n)\n\nchannels",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#c.-funnel-analysis",
-    "href": "ga4_bigquery_analysis.html#c.-funnel-analysis",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "4.3 4c. Funnel analysis",
-    "text": "4.3 4c. Funnel analysis\n\n\nCode\nall_counts &lt;- dbGetQuery(\n  duck,\n  \"\n  SELECT\n    event_name,\n    COUNT(DISTINCT user_pseudo_id) AS users\n  FROM ga4\n  GROUP BY event_name\n\"\n)\n\nfunnel &lt;- all_counts |&gt;\n  filter(\n    event_name %in%\n      c(\n        \"session_start\",\n        \"page_view\",\n        \"view_item\",\n        \"add_to_cart\",\n        \"purchase\"\n      )\n  ) |&gt;\n  mutate(\n    event_name = factor(\n      event_name,\n      levels = c(\n        \"session_start\",\n        \"page_view\",\n        \"view_item\",\n        \"add_to_cart\",\n        \"purchase\"\n      )\n    ),\n    step_pct = round(100 * users / max(users), 1)\n  ) |&gt;\n  arrange(event_name)\n\nfunnel\n\n\n\n  \n\n\n\n\n\nCode\nggplot(funnel, aes(x = event_name, y = users, fill = event_name)) +\n  geom_col(show.legend = FALSE) +\n  geom_text(\n    aes(label = glue(\"{comma(users)}\\n({step_pct}%)\")),\n    vjust = -0.3,\n    size = 3.5\n  ) +\n  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.15))) +\n  scale_fill_brewer(palette = \"Blues\", direction = -1) +\n  labs(title = \"GA4 Event Funnel\", x = NULL, y = \"Unique Users\") +\n  theme_minimal(base_size = 13)",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
-    "objectID": "ga4_bigquery_analysis.html#d.-device-breakdown",
-    "href": "ga4_bigquery_analysis.html#d.-device-breakdown",
-    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
-    "section": "4.4 4d. Device breakdown",
-    "text": "4.4 4d. Device breakdown\n\n\nCode\ndevices &lt;- dbGetQuery(\n  duck,\n  \"\n  SELECT\n    device_category,\n    COUNT(DISTINCT user_pseudo_id || CAST(session_id AS VARCHAR)) AS sessions,\n    ROUND(SUM(COALESCE(revenue,0)), 2)  AS revenue\n  FROM ga4\n  GROUP BY device_category\n  ORDER BY sessions DESC\n\"\n)\n\ndevices",
-    "crumbs": [
-      "Home",
-      "GA4 BigQuery Analysis with Arrow & DuckDB"
-    ]
-  },
-  {
     "objectID": "hierarchical-data-I.html",
     "href": "hierarchical-data-I.html",
     "title": "Rectangling GA4 Hierarchical Data: Understanding GA4 Data",
@@ -645,6 +249,556 @@
     "crumbs": [
       "Home",
       "Rectangling GA4 Hierarchical Data: Understanding GA4 Data"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html",
+    "href": "ga4_bigquery_analysis.html",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "",
+    "text": "Setup\n  \n  0.1 Install & Load Packages\n  \n  1 1. Connect to BigQuery\n  2 2. Pull Data from BigQuery → Arrow Table\n  \n  2.1 2a. Date range helper\n  2.2 2b. BigQuery SQL — flatten GA4 nested structs\n  2.3 2c. Execute & capture as Arrow Table\n  \n  3 3. Register Arrow Table in DuckDB\n  4 4. Analysis with DuckDB SQL\n  \n  4.1 4a. Daily sessions & revenue\n  4.2 4b. Channel performance\n  4.3 4c. Funnel analysis\n  4.4 4d. Device breakdown\n  \n  5 5. Using dplyr on Arrow (alternative to raw SQL)\n  6 6. Save Results to Parquet (for later reuse)\n  7 7. Cleanup\n  8 Workflow Summary",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#install-load-packages",
+    "href": "ga4_bigquery_analysis.html#install-load-packages",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "0.1 Install & Load Packages",
+    "text": "0.1 Install & Load Packages\n\n\nCode\n# Run once to install required packages\ninstall.packages(c(\n  \"bigrquery\", # BigQuery connector\n  \"DBI\", # Database Interface\n  \"dplyr\", # Data manipulation\n  \"arrow\", # Apache Arrow (columnar, efficient)\n  \"duckdb\", # In-process OLAP SQL engine\n  \"ggplot2\", # Plotting\n  \"lubridate\", # Date handling\n  \"scales\", # Axis formatting\n  \"glue\" # String interpolation\n))\n\n\n\n\nCode\nlibrary(bigrquery)\nlibrary(DBI)\nlibrary(dplyr)\nlibrary(arrow)\nlibrary(duckdb)\nlibrary(tidyverse)",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#a.-date-range-helper",
+    "href": "ga4_bigquery_analysis.html#a.-date-range-helper",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "2.1 2a. Date range helper",
+    "text": "2.1 2a. Date range helper\n\n\nCode\n# Define a rolling 90-day window\n#date_end   &lt;- Sys.Date() - 1                         # yesterday\n#date_start &lt;- date_end - 89                          # 90 days back\n\ndate_end &lt;- as.Date(\"2021-01-31\")\ndate_start &lt;- as.Date(\"2021-01-01\")\n\n# Format as YYYYMMDD for BQ table suffix pattern\nbq_start &lt;- format(date_start, \"%Y%m%d\")\nbq_end &lt;- format(date_end, \"%Y%m%d\")",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#b.-bigquery-sql-flatten-ga4-nested-structs",
+    "href": "ga4_bigquery_analysis.html#b.-bigquery-sql-flatten-ga4-nested-structs",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "2.2 2b. BigQuery SQL — flatten GA4 nested structs",
+    "text": "2.2 2b. BigQuery SQL — flatten GA4 nested structs\n\nGA4 data is heavily nested (events → event_params, items, etc.). We unnest the key fields we need in SQL before pulling.\n\n\n\nCode\nlibrary(glue)\n\nsql &lt;- glue(\n  \"\n  SELECT\n    -- Session / user dims\n    PARSE_DATE('%Y%m%d', event_date) AS event_date,\n    user_pseudo_id,\n    (SELECT value.int_value\n       FROM UNNEST(event_params)\n      WHERE key = 'ga_session_id') AS session_id,\n\n    -- Traffic source\n    traffic_source.source AS source,\n    traffic_source.medium AS medium,\n    traffic_source.name AS campaign,\n\n    -- Device\n    device.category AS device_category,\n    device.operating_system AS os,\n\n    -- Geo\n    geo.country AS country,\n\n    -- Event\n    event_name,\n    event_timestamp,\n\n    -- Ecommerce (NULL for non-purchase events)\n    ecommerce.purchase_revenue AS revenue,\n    ecommerce.transaction_id AS transaction_id\n\n  FROM `{BQ_PROJECT}.{BQ_DATASET}.events_*`\n  WHERE _TABLE_SUFFIX BETWEEN '{bq_start}' AND '{bq_end}'\n    AND event_name IN (\n      'session_start', 'page_view',\n      'view_item', 'add_to_cart', 'purchase'\n    )\n\"\n)\n\ncat(sql)\n\n\nSELECT\n  -- Session / user dims\n  PARSE_DATE('%Y%m%d', event_date) AS event_date,\n  user_pseudo_id,\n  (SELECT value.int_value\n     FROM UNNEST(event_params)\n    WHERE key = 'ga_session_id') AS session_id,\n\n  -- Traffic source\n  traffic_source.source AS source,\n  traffic_source.medium AS medium,\n  traffic_source.name AS campaign,\n\n  -- Device\n  device.category AS device_category,\n  device.operating_system AS os,\n\n  -- Geo\n  geo.country AS country,\n\n  -- Event\n  event_name,\n  event_timestamp,\n\n  -- Ecommerce (NULL for non-purchase events)\n  ecommerce.purchase_revenue AS revenue,\n  ecommerce.transaction_id AS transaction_id\n\nFROM `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`\nWHERE _TABLE_SUFFIX BETWEEN '20210101' AND '20210131'\n  AND event_name IN (\n    'session_start', 'page_view',\n    'view_item', 'add_to_cart', 'purchase'\n  )",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#c.-execute-capture-as-arrow-table",
+    "href": "ga4_bigquery_analysis.html#c.-execute-capture-as-arrow-table",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "2.3 2c. Execute & capture as Arrow Table",
+    "text": "2.3 2c. Execute & capture as Arrow Table\n\n\nCode\n# Execute the query; stream results into an Arrow Table\n# arrow::read_ipc_stream() handles memory efficiently\nresult &lt;- DBI::dbGetQuery(bq_con, sql)\n\n\n\n\n\n\n\n\n\nUnfortunately, this code above led to the following error when executed.\n\nBilled: 362.81 MB\nDownloading first chunk of data.\nDownloading the remaining 629,250 rows in 63 chunks of (up to) 10,000 rows.\n                                                              \nWarning messages:\n1: In as.integer.integer64(x) : NAs produced by integer overflow\n2: In as.integer.integer64(x) : NAs produced by integer overflow\n\nFixing the problem with requring with the following way.\n\n\n\n\n\n\nCode\n# use bigrquery functions to control bigint conversion\ntbl &lt;- bigrquery::bq_project_query(GCP_PROJECT, sql) # billed 362.81 MB\nresult &lt;- bigrquery::bq_table_download(\n  tbl,\n  bigint = \"numeric\",\n  page_size = 10000\n)\nresult # A tibble: 639,250 × 13\n\n\n\n  \n\n\n\n\nContinue…\n\n\n\nCode\n# Convert to Arrow Table (columnar, faster for downstream DuckDB queries)\nga4_arrow &lt;- arrow::as_arrow_table(result) # scannable Arrow object\n\n# Disconnect from BigQuery — we don't need it anymore\ndbDisconnect(bq_con)\n\n# Quick look\nprint(ga4_arrow)\n\n\nTable\n639250 rows x 13 columns\n$event_date &lt;date32[day]&gt;\n$user_pseudo_id &lt;string&gt;\n$session_id &lt;double&gt;\n$source &lt;string&gt;\n$medium &lt;string&gt;\n$campaign &lt;string&gt;\n$device_category &lt;string&gt;\n$os &lt;string&gt;\n$country &lt;string&gt;\n$event_name &lt;string&gt;\n$event_timestamp &lt;double&gt;\n$revenue &lt;double&gt;\n$transaction_id &lt;string&gt;\n\n\n\nTip — very large datasets: If the dataset exceeds available RAM, write it to Parquet first and query the files directly with DuckDB:\narrow::write_parquet(ga4_arrow, \"ga4_data.parquet\")\n# Then use duckdb::duckdb_register_arrow() or read_parquet() in SQL",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#a.-daily-sessions-revenue",
+    "href": "ga4_bigquery_analysis.html#a.-daily-sessions-revenue",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "4.1 4a. Daily sessions & revenue",
+    "text": "4.1 4a. Daily sessions & revenue\n\n\nCode\ndaily &lt;- dbGetQuery(\n  duck,\n  \"\n  SELECT\n    event_date,\n    COUNT(DISTINCT CASE WHEN event_name = 'session_start'\n                        THEN user_pseudo_id || CAST(session_id AS VARCHAR)\n                   END)                           AS sessions,\n    COUNT(DISTINCT CASE WHEN event_name = 'purchase'\n                        THEN transaction_id END)  AS transactions,\n    ROUND(SUM(COALESCE(revenue, 0)), 2)           AS revenue\n  FROM ga4\n  GROUP BY event_date\n  ORDER BY event_date\n\"\n) |&gt;\n  mutate(event_date = as.Date(event_date))\n\nhead(daily)\n\n\n\n  \n\n\n\nOutput:\n&gt; head(daily)\n  event_date sessions transactions revenue\n1 2021-01-01     2289           13     975\n2 2021-01-02     2705           14    1026\n3 2021-01-03     2753           14     552\n4 2021-01-04     3317           16     834\n5 2021-01-05     4410           28    1143\n6 2021-01-06     5951           31    2000\n\n\nCode\nlibrary(scales)\n\nggplot(daily, aes(x = event_date)) +\n  geom_col(aes(y = sessions), fill = \"#4285F4\", alpha = 0.8) +\n  geom_line(\n    aes(y = revenue * max(sessions) / max(revenue)),\n    color = \"#EA4335\",\n    linewidth = 1\n  ) +\n  scale_y_continuous(\n    name = \"Sessions\",\n    labels = comma,\n    sec.axis = sec_axis(\n      ~ . * max(daily$revenue) / max(daily$sessions),\n      name = \"Revenue (USD)\",\n      labels = dollar\n    )\n  ) +\n  scale_x_date(date_labels = \"%b %d\", date_breaks = \"1 week\") +\n  labs(title = \"Daily Sessions & Revenue\", x = NULL) +\n  theme_minimal(base_size = 13) +\n  theme(axis.title.y.right = element_text(color = \"#EA4335\"))",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#b.-channel-performance",
+    "href": "ga4_bigquery_analysis.html#b.-channel-performance",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "4.2 4b. Channel performance",
+    "text": "4.2 4b. Channel performance\n\n\nCode\nchannels &lt;- dbGetQuery(\n  duck,\n  \"\n  WITH sessions AS (\n    SELECT\n      source,\n      medium,\n      user_pseudo_id || CAST(session_id AS VARCHAR) AS session_key\n    FROM ga4\n    WHERE event_name = 'session_start'\n  ),\n  purchases AS (\n    SELECT\n      source,\n      medium,\n      COUNT(DISTINCT transaction_id) AS transactions,\n      SUM(revenue)                   AS revenue\n    FROM ga4\n    WHERE event_name = 'purchase'\n    GROUP BY source, medium\n  )\n  SELECT\n    s.source,\n    s.medium,\n    COUNT(DISTINCT s.session_key)         AS sessions,\n    COALESCE(p.transactions, 0)           AS transactions,\n    ROUND(COALESCE(p.revenue, 0), 2)      AS revenue,\n    ROUND(100.0 * COALESCE(p.transactions, 0)\n          / NULLIF(COUNT(DISTINCT s.session_key), 0), 2) AS cvr_pct\n  FROM sessions s\n  LEFT JOIN purchases p USING (source, medium)\n  GROUP BY s.source, s.medium, p.transactions, p.revenue\n  ORDER BY sessions DESC\n  LIMIT 20\n\"\n)\n\nchannels",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#c.-funnel-analysis",
+    "href": "ga4_bigquery_analysis.html#c.-funnel-analysis",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "4.3 4c. Funnel analysis",
+    "text": "4.3 4c. Funnel analysis\n\n\nCode\nall_counts &lt;- dbGetQuery(\n  duck,\n  \"\n  SELECT\n    event_name,\n    COUNT(DISTINCT user_pseudo_id) AS users\n  FROM ga4\n  GROUP BY event_name\n\"\n)\n\nfunnel &lt;- all_counts |&gt;\n  filter(\n    event_name %in%\n      c(\n        \"session_start\",\n        \"page_view\",\n        \"view_item\",\n        \"add_to_cart\",\n        \"purchase\"\n      )\n  ) |&gt;\n  mutate(\n    event_name = factor(\n      event_name,\n      levels = c(\n        \"session_start\",\n        \"page_view\",\n        \"view_item\",\n        \"add_to_cart\",\n        \"purchase\"\n      )\n    ),\n    step_pct = round(100 * users / max(users), 1)\n  ) |&gt;\n  arrange(event_name)\n\nfunnel\n\n\n\n  \n\n\n\n\n\nCode\nggplot(funnel, aes(x = event_name, y = users, fill = event_name)) +\n  geom_col(show.legend = FALSE) +\n  geom_text(\n    aes(label = glue(\"{comma(users)}\\n({step_pct}%)\")),\n    vjust = -0.3,\n    size = 3.5\n  ) +\n  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.15))) +\n  scale_fill_brewer(palette = \"Blues\", direction = -1) +\n  labs(title = \"GA4 Event Funnel\", x = NULL, y = \"Unique Users\") +\n  theme_minimal(base_size = 13)",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "ga4_bigquery_analysis.html#d.-device-breakdown",
+    "href": "ga4_bigquery_analysis.html#d.-device-breakdown",
+    "title": "GA4 BigQuery Analysis with Arrow & DuckDB",
+    "section": "4.4 4d. Device breakdown",
+    "text": "4.4 4d. Device breakdown\n\n\nCode\ndevices &lt;- dbGetQuery(\n  duck,\n  \"\n  SELECT\n    device_category,\n    COUNT(DISTINCT user_pseudo_id || CAST(session_id AS VARCHAR)) AS sessions,\n    ROUND(SUM(COALESCE(revenue,0)), 2)  AS revenue\n  FROM ga4\n  GROUP BY device_category\n  ORDER BY sessions DESC\n\"\n)\n\ndevices",
+    "crumbs": [
+      "Home",
+      "GA4 BigQuery Analysis with Arrow & DuckDB"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html",
+    "href": "Ga4-R-Methods-Guide.html",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "",
+    "text": "1 Comparisoon of Various Methods\n  \n  1.1 Small GA4 Project (&lt; 7 days)\n  \n  1.1.1 A few things worth highlighting from the table:\n  \n  1.2 Large GA4 Data (90 days)\n  \n  1.2.1 The three key shifts from the 7-day analysis are:\n  \n  \n  2 Recommended Workflow for Large GA4 Data\n  \n  2.1 Step 1: Install packages\n  2.2 Step 2: Download from BigQuery once, save as partitioned Parquet\n  2.3 Step 3: Connect DuckDB to the Parquet files\n  2.4 Step 4: Query as needed\n  2.5 Step 5: Close the connection when done",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html#small-ga4-project-7-days",
+    "href": "Ga4-R-Methods-Guide.html#small-ga4-project-7-days",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "1.1 Small GA4 Project (< 7 days)",
+    "text": "1.1 Small GA4 Project (&lt; 7 days)\nFor your current 7-day project, RDS alone is enough. As you scale up or start wanting SQL-style queries, DuckDB + Parquet is the most powerful pairing — DuckDB queries the Parquet files directly without even needing to load them first.\n\n\n1.1.1 A few things worth highlighting from the table:\nThe nested column problem is the deciding factor for GA4 specifically. RDS and DuckDB both handle event_params, device, and geo as-is, while raw Parquet forces you to flatten them first (which is where all that purrr complexity came from).\nDuckDB + Parquet is the best long-term investment because DuckDB can query Parquet files on disk directly with a single line — duckdb::duckdb_read_csv() or FROM read_parquet('data/*.parquet') — meaning you get the storage efficiency of Parquet without writing Arrow query pipelines.\nFor your current 7-day project, RDS wins on simplicity. But if you plan to scale to months of GA4 data, switching to DuckDB early costs very little effort and will save you a lot of pain later.",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html#large-ga4-data-90-days",
+    "href": "Ga4-R-Methods-Guide.html#large-ga4-data-90-days",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "1.2 Large GA4 Data (90 days)",
+    "text": "1.2 Large GA4 Data (90 days)\n\n\n1.2.1 The three key shifts from the 7-day analysis are:\nRDS is now off the table. At 3 months, you’re likely looking at 3–10M rows and 500MB–2GB of raw data. Loading that entirely into RAM on every session is slow, risks crashing R with an out-of-memory error, and gives you no ability to query just a slice of the data.\nDuckDB alone becomes marginal. A .duckdb file is a single binary blob — you can’t selectively read January without touching February and March. It’s fine for medium data but loses its edge at this scale.\nDuckDB + Parquet is the clear winner, and the setup is simpler than it sounds. You save once as date-partitioned Parquet files, then DuckDB reads them directly on disk:\n```{r}\nlibrary(duckdb)\ncon &lt;- dbConnect(duckdb())\n\n# DuckDB reads Parquet files directly — no loading into R first\ndbGetQuery(con, \"\n  SELECT\n    event_date,\n    event_name,\n    ep.value.string_value AS page_location\n  FROM read_parquet('data/ga4_parquet/**/*.parquet', hive_partitioning = true)\n  CROSS JOIN UNNEST(event_params) AS ep(key, value)\n  WHERE event_date BETWEEN '20210101' AND '20210131'\n    AND ep.key = 'page_location'\n\")\n```\n\n\n\n\n\n\nThree things make this powerful at your scale: the hive_partitioning = true flag means DuckDB skips entire month folders when your WHERE clause doesn’t need them; UNNEST handles the nested GA4 columns without any upfront flattening; and nothing is loaded into R memory until dbGetQuery() returns the final filtered result.",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html#step-1-install-packages",
+    "href": "Ga4-R-Methods-Guide.html#step-1-install-packages",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "2.1 Step 1: Install packages",
+    "text": "2.1 Step 1: Install packages\n```{r}\ninstall.packages(c(\"bigrquery\", \"duckdb\", \"arrow\", \"dplyr\"))\n```",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html#step-2-download-from-bigquery-once-save-as-partitioned-parquet",
+    "href": "Ga4-R-Methods-Guide.html#step-2-download-from-bigquery-once-save-as-partitioned-parquet",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "2.2 Step 2: Download from BigQuery once, save as partitioned Parquet",
+    "text": "2.2 Step 2: Download from BigQuery once, save as partitioned Parquet\nDo this once only. All future analysis reads from local Parquet files.\n```{r}\nlibrary(bigrquery)\nlibrary(arrow)\nlibrary(dplyr)\n\nbilling_project &lt;- \"your-project-id\"\n\n# Download in monthly chunks to avoid memory pressure\nmonths &lt;- list(\n  c(\"20210101\", \"20210131\"),\n  c(\"20210201\", \"20210228\"),\n  c(\"20210301\", \"20210331\")\n)\n\ndir.create(\"data/ga4_parquet\", recursive = TRUE, showWarnings = FALSE)\n\nfor (m in months) {\n  message(\"Downloading \", m[1], \" to \", m[2], \"...\")\n  \n  result &lt;- bq_project_query(billing_project, glue::glue(\"\n    SELECT\n      event_date, event_timestamp, event_name,\n      event_params, user_pseudo_id,\n      device, geo, traffic_source, ecommerce, items\n    FROM `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`\n    WHERE _TABLE_SUFFIX BETWEEN '{m[1]}' AND '{m[2]}'\n  \"))\n  \n  chunk &lt;- bq_table_download(result, bigint = \"numeric\", page_size = 1000)\n  \n  # Write directly to partitioned Parquet — Arrow infers event_date partition\n  chunk |&gt;\n    group_by(event_date) |&gt;\n    write_dataset(\"data/ga4_parquet\", format = \"parquet\")\n  \n  rm(chunk); gc()  # free memory between chunks\n}\n```\n\nYour folder structure will look like:\n\ndata/ga4_parquet/\n  event_date=20210101/part-0.parquet\n  event_date=20210102/part-0.parquet\n  ...",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html#step-3-connect-duckdb-to-the-parquet-files",
+    "href": "Ga4-R-Methods-Guide.html#step-3-connect-duckdb-to-the-parquet-files",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "2.3 Step 3: Connect DuckDB to the Parquet files",
+    "text": "2.3 Step 3: Connect DuckDB to the Parquet files\nAt the start of every future session, just run this — no re-downloading, no loading into RAM:\n```{r}\nlibrary(duckdb)\nlibrary(DBI)\n\ncon &lt;- dbConnect(duckdb())\n\n# Register the entire partitioned dataset as a virtual table\ndbExecute(con, \"\n  CREATE VIEW ga4 AS\n  SELECT * FROM read_parquet(\n    'data/ga4_parquet/**/*.parquet',\n    hive_partitioning = true\n  )\n\")\n```\nFrom here, ga4 behaves like a database table. DuckDB reads only the Parquet partitions your query needs.",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html#step-4-query-as-needed",
+    "href": "Ga4-R-Methods-Guide.html#step-4-query-as-needed",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "2.4 Step 4: Query as needed",
+    "text": "2.4 Step 4: Query as needed\nFlat columns — standard SQL:\n```{r}\n# Only touches January partitions on disk\ndbGetQuery(con, \"\n  SELECT event_date, event_name, COUNT(*) AS n\n  FROM ga4\n  WHERE event_date BETWEEN '20210101' AND '20210131'\n  GROUP BY 1, 2\n  ORDER BY 3 DESC\n\")\n```\nNested columns — use UNNEST in SQL:\n```{r}\n# Extract page_location from event_params without any upfront flattening\ndbGetQuery(con, \"\n  SELECT\n    event_date,\n    user_pseudo_id,\n    ep.value.string_value AS page_location\n  FROM ga4\n  CROSS JOIN UNNEST(event_params) AS ep(key, value)\n  WHERE event_name = 'page_view'\n    AND ep.key = 'page_location'\n    AND event_date BETWEEN '20210101' AND '20210131'\n\")\n```\nDevice and geo nested fields:\n```{r}\ndbGetQuery(con, \"\n  SELECT\n    device.category AS device_type,\n    device.operating_system AS os,\n    geo.country,\n    geo.city,\n    COUNT(DISTINCT user_pseudo_id) AS users\n  FROM ga4\n  WHERE event_date BETWEEN '20210101' AND '20210331'\n  GROUP BY 1, 2, 3, 4\n  ORDER BY 5 DESC\n\")\n```\nPurchase funnel — joining unnested params:\n```{r}\ndbGetQuery(con, \"\n  SELECT\n    event_name,\n    COUNT(DISTINCT user_pseudo_id) AS users,\n    COUNT(*)                        AS events\n  FROM ga4\n  WHERE event_name IN ('session_start','view_item','add_to_cart','purchase')\n    AND event_date BETWEEN '20210101' AND '20210331'\n  GROUP BY 1\n  ORDER BY 3 DESC\n\")\n\n```",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "Ga4-R-Methods-Guide.html#step-5-close-the-connection-when-done",
+    "href": "Ga4-R-Methods-Guide.html#step-5-close-the-connection-when-done",
+    "title": "Guideline for Working with GA4 Data in R",
+    "section": "2.5 Step 5: Close the connection when done",
+    "text": "2.5 Step 5: Close the connection when done\n```{r}\ndbDisconnect(con)\n```",
+    "crumbs": [
+      "Home",
+      "Guideline for Working with GA4 Data in R"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html",
+    "href": "hierarchical-data-0.html",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "",
+    "text": "1 What is data rectangling?\n  \n  1.1 Packages to use\n  \n  2 Lists\n  \n  2.1 Hierarchy\n  2.2 List-Columns\n  \n  3 Unnesting\n  \n  3.1 Named list-columns\n  3.2 Unnamed list-columns\n  3.3 unnest_wider()\n  3.4 unnest_longer()\n  3.5 Inconsitent Types\n  3.6 Other functions from tidyr\n  3.7 Exercises\n  \n  4 Case Studies\n  \n  4.1 Very wide data\n  4.2 Relational data\n  4.3 Deeply nested\n  4.4 What Is hoist()?\n  4.5 Exercises\n  \n  5 JSON\n  \n  5.1 Data Types\n  5.2 jsonlite\n  5.3 Starting the rectangling process\n  \n  6 Reference",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#packages-to-use",
+    "href": "hierarchical-data-0.html#packages-to-use",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "1.1 Packages to use",
+    "text": "1.1 Packages to use\n\n\nCode\n#install.packages(\"repurrrsive\")\nlibrary(tidyverse)\nlibrary(repurrrsive)\nlibrary(jsonlite)",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#hierarchy",
+    "href": "hierarchical-data-0.html#hierarchy",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "2.1 Hierarchy",
+    "text": "2.1 Hierarchy\n\n\nLists can contain any type of object, including other lists.\nThis makes them suitable for representing hierarchical (tree-like) structures:\n\n\n\n\nCode\nx3 &lt;- list(list(1, 2), list(3, 4))\nstr(x3)\n\n\nList of 2\n $ :List of 2\n  ..$ : num 1\n  ..$ : num 2\n $ :List of 2\n  ..$ : num 3\n  ..$ : num 4\n\n\n\n\nThis is notably different to c(), which generates a flat vector:\n\n\n\n\nCode\nc(c(1, 2), c(3, 4))\n\n\n[1] 1 2 3 4\n\n\n\n\nCode\nx5 &lt;- list(1, list(2, list(3, list(4, list(5)))))\nstr(x5)\n\n\nList of 2\n $ : num 1\n $ :List of 2\n  ..$ : num 2\n  ..$ :List of 2\n  .. ..$ : num 3\n  .. ..$ :List of 2\n  .. .. ..$ : num 4\n  .. .. ..$ :List of 1\n  .. .. .. ..$ : num 5\n\n\nCode\nview(x5)",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#list-columns",
+    "href": "hierarchical-data-0.html#list-columns",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "2.2 List-Columns",
+    "text": "2.2 List-Columns\n\n\nCode\ndf &lt;- tibble(\n  x = 1:2,\n  y = c(\"a\", \"b\"),\n  z = list(list(1, 2), list(3, 4, 5))\n)\ndf\n\n\n\n  \n\n\n\n\n\nCode\ndf |&gt;\n  filter(x == 1)\n\n\n\n  \n\n\n\n\n\nComputing with list-columns is harder.\n\n\n\n\ntibble() treats lists like vectors and the print method has been designed with lists in mind.",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#named-list-columns",
+    "href": "hierarchical-data-0.html#named-list-columns",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "3.1 Named list-columns",
+    "text": "3.1 Named list-columns\n\n\nNamed list-columns naturally unnest into columns: each named element becomes a new named column.\n\n\n\n\nCode\ndf1 &lt;- tribble(\n  ~x , ~y                   ,\n   1 , list(a = 11, b = 12) ,\n   2 , list(a = 21, b = 22) ,\n   3 , list(a = 31, b = 32) ,\n)\ndf1",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#unnamed-list-columns",
+    "href": "hierarchical-data-0.html#unnamed-list-columns",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "3.2 Unnamed list-columns",
+    "text": "3.2 Unnamed list-columns\n\n\nWhen the children are unnamed, the number of elements tends to vary from row-to-row.\n\n\n\n\nUnnamed list-columns naturally unnest into rows: you’ll get one row for each child.\n\n\n\n\nCode\ndf2 &lt;- tribble(\n  ~x , ~y               ,\n   1 , list(11, 12, 13) ,\n   2 , list(21)         ,\n   3 , list(31, 32)     ,\n)",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#unnest_wider",
+    "href": "hierarchical-data-0.html#unnest_wider",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "3.3 unnest_wider()",
+    "text": "3.3 unnest_wider()\n\nUsed when each row has the same number of elements with the same names\n\n\n\nCode\ndf1 |&gt;\n  unnest_wider(y)\n\n\n\n  \n\n\n\n\nBy default, the names of the new columns come exclusively from the names of the list elements, but you can use the names_sep argument to request that they combine the column name and the element name. This is useful for disambiguating repeated names.\n\n\n\nCode\ndf1 |&gt;\n  unnest_wider(y, names_sep = \"_\")",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#unnest_longer",
+    "href": "hierarchical-data-0.html#unnest_longer",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "3.4 unnest_longer()",
+    "text": "3.4 unnest_longer()\n\nUsed when each row contains an unnamed list\n\n\n\nCode\ndf2 |&gt;\n  unnest_longer(y)\n\n\n\n  \n\n\n\n\nNote how x is duplicated for each element inside of y: we get one row of output for each element inside the list-column.\n\n\nBut what happens if one of the elements is empty, as in the following example?\n\n\n\nCode\ndf6 &lt;- tribble(\n  ~x  , ~y         ,\n  \"a\" , list(1, 2) ,\n  \"b\" , list(3)    ,\n  \"c\" , list()\n)\n\ndf6 |&gt;\n  unnest_longer(y)\n\n\n\n  \n\n\n\n\nWe get zero rows in the output, so the row effectively disappears.\n\n\nIf you want to preserve that row, adding NA in y, set keep_empty = TRUE.\n\n\n\nCode\ndf6 &lt;- tribble(\n  ~x  , ~y         ,\n  \"a\" , list(1, 2) ,\n  \"b\" , list(3)    ,\n  \"c\" , list(NA)\n)\n\ndf6 |&gt;\n  unnest_longer(y, keep_empty = TRUE)",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#inconsitent-types",
+    "href": "hierarchical-data-0.html#inconsitent-types",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "3.5 Inconsitent Types",
+    "text": "3.5 Inconsitent Types\n\nWhat happens if you unnest a list-column that contains different types of vector?\n\n\n\nCode\ndf4 &lt;- tribble(\n  ~x  , ~y                 ,\n  \"a\" , list(1)            ,\n  \"b\" , list(\"a\", TRUE, 5)\n)\n\n\n\n\nCode\ndf4 |&gt;\n  unnest_longer(y)\n\n\n\n  \n\n\n\n\nThe output contains a list-column, but every element of the list-column contains a single element.\n\n\nDealing with inconsistent types is challenging and the details depend on the precise nature of the problem and your goals, but you’ll most likely need tools from Iteration.",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#other-functions-from-tidyr",
+    "href": "hierarchical-data-0.html#other-functions-from-tidyr",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "3.6 Other functions from tidyr",
+    "text": "3.6 Other functions from tidyr\n\nunnest_auto() automatically picks between unnest_longer() and unnest_wider() based on the structure of the list-column. It’s great for rapid exploration, but ultimately it’s a bad idea because it doesn’t force you to understand how your data is structured, and makes your code harder to understand.\nunnest() expands both rows and columns. It’s useful when you have a list-column that contains a 2d structure like a data frame, which you don’t see in this book, but you might encounter if you use the tidymodels ecosystem.",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#exercises",
+    "href": "hierarchical-data-0.html#exercises",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "3.7 Exercises",
+    "text": "3.7 Exercises\n\nWhat happens when you use unnest_wider() with unnamed list-columns like df2? What argument is now necessary? What happens to missing values?\nWhat happens when you use unnest_longer() with named list-columns like df1? What additional information do you get in the output? How can you suppress that extra detail?\nFrom time-to-time you encounter data frames with multiple list-columns with aligned values. For example, in the following data frame, the values of y and z are aligned (i.e. y and z will always have the same length within a row, and the first value of y corresponds to the first value of z). What happens if you apply two unnest_longer() calls to this data frame? How can you preserve the relationship between x and y? (Hint: carefully read the docs).\n\n\n\nCode\ndf4 &lt;- tribble(\n  ~x  , ~y                              , ~z                              ,\n  \"a\" , list(\"y-a-1\", \"y-a-2\")          , list(\"z-a-1\", \"z-a-2\")          ,\n  \"b\" , list(\"y-b-1\", \"y-b-2\", \"y-b-3\") , list(\"z-b-1\", \"z-b-2\", \"z-b-3\")\n)",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#very-wide-data",
+    "href": "hierarchical-data-0.html#very-wide-data",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "4.1 Very wide data",
+    "text": "4.1 Very wide data\n\ngh_repos. This is a list that contains data about a collection of GitHub repositories retrieved using the GitHub API.\n\n\n\nCode\nlibrary(repurrrsive)\n#view(gh_repos)\n\nrepos &lt;- tibble(json = gh_repos)\nrepos\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json)\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  names() |&gt;\n  head(10)\n\n\n [1] \"id\"          \"name\"        \"full_name\"   \"owner\"       \"private\"    \n [6] \"html_url\"    \"description\" \"fork\"        \"url\"         \"forks_url\"  \n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, full_name, owner, description)\n\n\n\n  \n\n\n\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, full_name, owner, description) |&gt;\n  unnest_wider(owner)\n\n\nOutput:\nError in `unnest_wider()` at w09-hierarchical-data/ch23/draft-hierarchical-data-0.qmd:301:1:\n! Can't duplicate names between the affected columns and the original data.\n✖ These names are duplicated:\n  ℹ `id`, from `owner`.\nℹ Use `names_sep` to disambiguate using the column name.\n\n\nCode\nrepos |&gt;\n  unnest_longer(json) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, full_name, owner, description) |&gt;\n  unnest_wider(owner, names_sep = \"_\")",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#relational-data",
+    "href": "hierarchical-data-0.html#relational-data",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "4.2 Relational data",
+    "text": "4.2 Relational data\n\nNested data is sometimes used to represent data that we’d usually spread across multiple data frames.\n\n\nExample: got_chars which contains data about characters that appear in the Game of Thrones books and TV series.\n\n\n\nCode\nchars &lt;- tibble(json = got_chars)\nchars\n\n\n\n  \n\n\n\nCode\n# Widening\nchars |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\nCode\n# selecting a few\nchars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, name, gender, culture, born, died, alive)\n\n\n\n  \n\n\n\nCode\n# search for list-columns\nchars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, where(is.list))\n\n\n\n  \n\n\n\nCode\n# explore titles column\nchars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, titles) |&gt;\n  unnest_longer(titles)\n\n\n\n  \n\n\n\nCode\n# cleanning\ntitles &lt;- chars |&gt;\n  unnest_wider(json) |&gt;\n  select(id, titles) |&gt;\n  unnest_longer(titles) |&gt;\n  filter(titles != \"\") |&gt;\n  rename(title = titles)\n\ntitles\n\n\n\n  \n\n\n\n\nYou could imagine creating a table like this for each of the list-columns, then using joins to combine them with the character data as you need it.",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#deeply-nested",
+    "href": "hierarchical-data-0.html#deeply-nested",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "4.3 Deeply nested",
+    "text": "4.3 Deeply nested\n\nWhen the data is very deeply nested and requires repeated rounds of unnest_wider() and unnest_longer() to unravel: gmaps_cities.\n\n\n\nCode\ngmaps_cities\n\n\n\n  \n\n\n\n\n\nCode\ngmaps_cities |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\n\n\nDrop the status column since they’re all OK\n\n\n\n\nUnnamed list\n\n\n\n\nCode\ngmaps_cities |&gt;\n  unnest_wider(json) |&gt;\n  select(-status) |&gt;\n  unnest_longer(results)\n\n\n\n  \n\n\n\n\nNow results is a named list, so we’ll use unnest_wider():\n\n\n\nCode\nlocations &lt;- gmaps_cities |&gt;\n  unnest_wider(json) |&gt;\n  select(-status) |&gt;\n  unnest_longer(results) |&gt;\n  unnest_wider(results)\n\nlocations\n\n\n\n  \n\n\n\n\nThere are a few different places we could go from here. We might want to determine the exact location of the match, which is stored in the geometry list-column:\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry)\n\n\n\n  \n\n\n\n\nWe can unnest location to see the latitude (lat) and longitude (lng):\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry) |&gt;\n  unnest_wider(location)\n\n\n\n  \n\n\n\n\nExtracting the bounds requires a few more steps:\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry) |&gt;\n  # focus on the variables of interest\n  select(!location:viewport) |&gt;\n  unnest_wider(bounds)\n\n\n\n  \n\n\n\n\nWe then rename southwest and northeast (the corners of the rectangle) so we can use names_sep to create short but evocative names:\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  unnest_wider(geometry) |&gt;\n  select(!location:viewport) |&gt;\n  unnest_wider(bounds) |&gt;\n  rename(ne = northeast, sw = southwest) |&gt;\n  unnest_wider(c(ne, sw), names_sep = \"_\")\n\n\n\n  \n\n\n\n\nOnce you’ve discovered the path to get to the components you’re interested in, you can extract them directly using another tidyr function, hoist():\n\n\n\nCode\nlocations |&gt;\n  select(city, formatted_address, geometry) |&gt;\n  hoist(\n    geometry,\n    ne_lat = c(\"bounds\", \"northeast\", \"lat\"),\n    sw_lat = c(\"bounds\", \"southwest\", \"lat\"),\n    ne_lng = c(\"bounds\", \"northeast\", \"lng\"),\n    sw_lng = c(\"bounds\", \"southwest\", \"lng\"),\n  )",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#what-is-hoist",
+    "href": "hierarchical-data-0.html#what-is-hoist",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "4.4 What Is hoist()?",
+    "text": "4.4 What Is hoist()?\nhoist() is a function from {tidyr} that lets you pull specific elements out of a list-column by name or position, without unnesting the entire structure. Think of it as a surgical tool compared to the blunt instruments of unnest_wider() and unnest_longer()",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#exercises-1",
+    "href": "hierarchical-data-0.html#exercises-1",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "4.5 Exercises",
+    "text": "4.5 Exercises\n\nRoughly estimate when gh_repos was created. Why can you only roughly estimate the date?\nThe owner column of gh_repos contains a lot of duplicated information because each owner can have many repos. Can you construct an owners data frame that contains one row for each owner? (Hint: does distinct() work with list-cols?)\nFollow the steps used for titles to create similar tables for the aliases, allegiances, books, and TV series for the Game of Thrones characters.\nExplain the following code line-by-line. Why is it interesting? Why does it work for got_chars but might not work in general?\n\n\n\nCode\ntibble(json = got_chars) |&gt;\n  unnest_wider(json) |&gt;\n  select(id, where(is.list)) |&gt;\n  pivot_longer(\n    where(is.list),\n    names_to = \"name\",\n    values_to = \"value\"\n  ) |&gt;\n  unnest_longer(value)\n\n\n\n  \n\n\n\n\nIn gmaps_cities, what does address_components contain? Why does the length vary between rows? Unnest it appropriately to figure it out. (Hint: types always appears to contain two elements. Does unnest_wider() make it easier to work with than unnest_longer()?) .",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#data-types",
+    "href": "hierarchical-data-0.html#data-types",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "5.1 Data Types",
+    "text": "5.1 Data Types\nIt has six key data types. Four of them are scalars:\n\nThe simplest type is a null (null) which plays the same role as NA in R. It represents the absence of data.\nA string is much like a string in R, but must always use double quotes.\nA number is similar to R’s numbers: they can use integer (e.g., 123), decimal (e.g., 123.45), or scientific (e.g., 1.23e3) notation. JSON doesn’t support Inf, -Inf, or NaN.\nA boolean is similar to R’s TRUE and FALSE, but uses lowercase true and false.\n\nTo represent multiple values you need to use one of the two remaining types: arrays and objects.\n\nBoth arrays and objects are similar to lists in R; the difference is whether or not they’re named.\n\nAn array is like an unnamed list, and is written with []. For example [1, 2, 3] is an array containing 3 numbers, and [null, 1, \"string\", false] is an array that contains a null, a number, a string, and a boolean.\nAn object is like a named list, and is written with {}. The names (keys in JSON terminology) are strings, so must be surrounded by quotes. For example, {\"x\": 1, \"y\": 2} is an object that maps x to 1 and y to 2.",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#jsonlite",
+    "href": "hierarchical-data-0.html#jsonlite",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "5.2 jsonlite",
+    "text": "5.2 jsonlite\n\nThis package convert JSON into R data structures\nread_json() and parse_json(). \n\n\n\nCode\n# A path to a json file inside the package:\ngh_users_json()\n\n\n[1] \"C:/Users/jmjung/AppData/Local/Programs/R/R-4.5.2/library/repurrrsive/extdata/gh_users.json\"\n\n\nCode\n#&gt; [1] \"/home/runner/work/_temp/Library/repurrrsive/extdata/gh_users.json\"\n\n# Read it with read_json()\ngh_users2 &lt;- read_json(gh_users_json())\n\n# Check it's the same as the data we were using previously\nidentical(gh_users, gh_users2)\n\n\n[1] TRUE\n\n\nCode\n#&gt; [1] TRUE\n\n\n\n\nCode\nstr(parse_json(\"1\"))\n\n\n int 1\n\n\n\n\nCode\nstr(parse_json('[1, 2, 3]')) # array\n\n\nList of 3\n $ : int 1\n $ : int 2\n $ : int 3\n\n\n\n\nCode\nstr(parse_json('{\"x\": [1, 2, 3]}')) # object\n\n\nList of 1\n $ x:List of 3\n  ..$ : int 1\n  ..$ : int 2\n  ..$ : int 3",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-0.html#starting-the-rectangling-process",
+    "href": "hierarchical-data-0.html#starting-the-rectangling-process",
+    "title": "Rectangling Hierarchical Data: Ch23",
+    "section": "5.3 Starting the rectangling process",
+    "text": "5.3 Starting the rectangling process\n\nIn most cases, JSON files contain a single top-level array\n\n\n\nCode\njson &lt;- '[\n  {\"name\": \"John\", \"age\": 34},\n  {\"name\": \"Susan\", \"age\": 27}\n]'\n\ndf &lt;- tibble(json = parse_json(json))\ndf\n\n\n\n  \n\n\n\n\n\nCode\ndf |&gt;\n  unnest_wider(json)\n\n\n\n  \n\n\n\n\nIn rarer cases, the JSON file consists of a single top-level JSON object, representing one “thing”. In this case, you’ll need to kick off the rectangling process by wrapping it in a list, before you put it in a tibble.\n\n\n\nCode\njson &lt;- '{\n  \"status\": \"OK\", \n  \"results\": [\n    {\"name\": \"John\", \"age\": 34},\n    {\"name\": \"Susan\", \"age\": 27}\n ]\n}\n'\ndf &lt;- tibble(json = list(parse_json(json)))\ndf\n\n\n\n  \n\n\n\n\n\nCode\ndf |&gt;\n  unnest_wider(json) |&gt;\n  unnest_longer(results) |&gt;\n  unnest_wider(results)\n\n\n\n  \n\n\n\n\nAlternatively, you can reach inside the parsed JSON and start with the bit that you actually care about:\n\n\n\nCode\ndf &lt;- tibble(results = parse_json(json)$results)\ndf |&gt;\n  unnest_wider(results)",
+    "crumbs": [
+      "Home",
+      "Rectangling Hierarchical Data: Ch23"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html",
+    "href": "hierarchical-data-II.html",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "",
+    "text": "Setup\n  \n  0.1 Load Packages\n  0.2 Connect to BigQuery\n  0.3 Pull Data from BigQuery → Single Parquet File\n  0.4 Load the data to RAM\n  \n  1 Part 3: Marketing Analytics in Practice\n  \n  1.1 Building the Master Analytical Table\n  1.2 Analysis 1: Traffic Source Performance\n  1.3 Analysis 2: Device and Geographic Breakdown\n  1.4 Analysis 3: Content Performance\n  1.5 Analysis 4: E-commerce Funnel\n  1.6 Analysis 5: Session Engagement Deep-Dive\n  \n  2 Rectangling Reference: Complete Cheat Sheet\n  3 Exercises\n  4 Summary\n  \n  4.1 What We Covered\n  \n  4.1.1 From R4DS (Applied to GA4)\n  4.1.2 Beyond R4DS (GA4-Specific)\n  \n  4.2 The Three Patterns at a Glance\n  4.3 Further Reading\n  \n  5 Reference",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#load-packages",
+    "href": "hierarchical-data-II.html#load-packages",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "0.1 Load Packages",
+    "text": "0.1 Load Packages\n\n\nCode\n# install.packages(c(\"vctrs\", \"dplyr\"), repos = \"https://cloud.r-project.org\")\nlibrary(bigrquery)\nlibrary(DBI)\nlibrary(arrow)\nlibrary(duckdb)\nlibrary(duckplyr)\nlibrary(tidyr)\nlibrary(tidyverse)",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#connect-to-bigquery",
+    "href": "hierarchical-data-II.html#connect-to-bigquery",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "0.2 Connect to BigQuery",
+    "text": "0.2 Connect to BigQuery\n\n\nCode\n# ── Configuration ────────────────────────────────────────────────────────────\nGCP_PROJECT &lt;- \"ga4-bigquery-cppmsdm\" # &lt;-- change this\nBQ_PROJECT &lt;- \"bigquery-public-data\"\nBQ_DATASET &lt;- \"ga4_obfuscated_sample_ecommerce\"\n\n# Authenticate (opens browser on first run; token cached in ~/.cache/gargle)\n# bq_auth()                          # uncomment if not yet authed\n\n# bq_user()\n\n# Open a DBI connection to BigQuery\nbq_con &lt;- dbConnect(\n  bigrquery::bigquery(),\n  project = BQ_PROJECT,\n  dataset = BQ_DATASET,\n  billing = GCP_PROJECT\n)\n\n# Confirm tables are visible\ndbListTables(bq_con)",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#pull-data-from-bigquery-single-parquet-file",
+    "href": "hierarchical-data-II.html#pull-data-from-bigquery-single-parquet-file",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "0.3 Pull Data from BigQuery → Single Parquet File",
+    "text": "0.3 Pull Data from BigQuery → Single Parquet File\n\n\nCode\n# ── Run this chunk ONCE. It saves data locally. ───────────────────────────────\ndir.create(\"data\", showWarnings = FALSE)\n\nquery_result &lt;- bq_project_query(\n  GCP_PROJECT,\n  \"SELECT\n     event_date,\n     event_timestamp,\n     event_name,\n     event_params,\n     user_pseudo_id,\n     device,\n     geo,\n     traffic_source,\n     ecommerce,\n     items,\n     user_properties\n   FROM `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*`\n   WHERE _TABLE_SUFFIX BETWEEN '20210101' AND '20210107'\"\n)\n\n# A tibble data residing in memory\nga4_raw &lt;- query_result |&gt;\n  bq_table_download(\n    bigint = \"numeric\", # Convert INT64 to R numeric (sufficient for most analyses)\n    page_size = 1000 # Download in batches of 10k rows\n  )\n\n# Save once after BigQuery download\n# install.packages(\"qs2\")\nlibrary(qs2)\n\n# Save\nqs_save(ga4_raw, \"data/ga4_raw.qs2\")\n\n# Disconnect from BigQuery — we don't need it anymore\ndbDisconnect(bq_con)",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#load-the-data-to-ram",
+    "href": "hierarchical-data-II.html#load-the-data-to-ram",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "0.4 Load the data to RAM",
+    "text": "0.4 Load the data to RAM\n\n\nCode\nlibrary(qs2)\n# Create or load an Arrow table\nga4_qs &lt;- qs_read(\"data/ga4_raw.qs2\")\n\n\n\n\n\n\n\n\nNoteqs Package\n\n\n\nqs stands for Quick Serialization. It is a drop-in replacement for saveRDS()/readRDS() that uses a more efficient compression algorithm (ZSTD) instead of R’s default gzip, making it:\n\n2-5x faster to save and load\nSmaller file sizes than RDS\nPreserves all R objects exactly, including nested lists, data frames, and complex structures\n\nIt was designed specifically for the use case of caching large R objects locally — which is exactly what we need for GA4 data.\nqs2 is the newer, updated version with further performance improvements.",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#building-the-master-analytical-table",
+    "href": "hierarchical-data-II.html#building-the-master-analytical-table",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "1.1 Building the Master Analytical Table",
+    "text": "1.1 Building the Master Analytical Table\nRather than re-running the pipelines for every analysis, we assemble one wide, analysis-ready table that joins the flattened structs, flattened event_params, and e-commerce data:\n\n\nCode\n# ── Step 1: Flatten struct columns ────────────────────────────────────────────\nga4_structs &lt;- ga4_qs |&gt;\n  filter(event_name == \"purchase\") |&gt;\n  select(\n    event_date,\n    event_name,\n    event_timestamp,\n    user_pseudo_id,\n    device,\n    geo,\n    traffic_source\n  ) |&gt;\n  unnest_wider(device, names_sep = \"_\") |&gt;\n  unnest_wider(geo, names_sep = \"_\") |&gt;\n  unnest_wider(traffic_source, names_sep = \"_\")\nnames(ga4_structs)\n\n\n [1] \"event_date\"                      \"event_name\"                     \n [3] \"event_timestamp\"                 \"user_pseudo_id\"                 \n [5] \"device_category\"                 \"device_mobile_brand_name\"       \n [7] \"device_mobile_model_name\"        \"device_mobile_marketing_name\"   \n [9] \"device_mobile_os_hardware_model\" \"device_operating_system\"        \n[11] \"device_operating_system_version\" \"device_vendor_id\"               \n[13] \"device_advertising_id\"           \"device_language\"                \n[15] \"device_is_limited_ad_tracking\"   \"device_time_zone_offset_seconds\"\n[17] \"device_web_info\"                 \"geo_continent\"                  \n[19] \"geo_sub_continent\"               \"geo_country\"                    \n[21] \"geo_region\"                      \"geo_city\"                       \n[23] \"geo_metro\"                       \"traffic_source_medium\"          \n[25] \"traffic_source_name\"             \"traffic_source_source\"          \n\n\n\n\nCode\n# ── Step 2: Flatten event_params ──────────────────────────────────────────────\nga4_params &lt;- ga4_qs |&gt;\n  select(\n    event_date,\n    event_name,\n    event_timestamp,\n    user_pseudo_id,\n    event_params\n  ) |&gt;\n  unnest_longer(event_params) |&gt;\n  unnest_wider(event_params) |&gt;\n  unnest_wider(value, names_sep = \"_\") |&gt;\n  unnest_wider(value_1) |&gt;\n  mutate(\n    param_value = coalesce(\n      string_value,\n      as.character(int_value),\n      as.character(float_value),\n      as.character(double_value)\n    )\n  ) |&gt;\n  select(\n    event_date,\n    event_name,\n    event_timestamp,\n    user_pseudo_id,\n    key,\n    param_value\n  ) |&gt;\n  pivot_wider(\n    names_from = key,\n    values_from = param_value,\n    values_fn = first\n  )\n\n# Save\nqs_save(ga4_params, \"data/ga4_params.qs2\")\n\n\n\n\nCode\n# Create or load an Arrow table\nga4_params &lt;- qs_read(\"data/ga4_params.qs2\")\nglimpse(ga4_params)\n\n\nRows: 245,209\nColumns: 37\n$ event_date            &lt;chr&gt; \"20210102\", \"20210102\", \"20210102\", \"20210102\", …\n$ event_name            &lt;chr&gt; \"page_view\", \"user_engagement\", \"first_visit\", \"…\n$ event_timestamp       &lt;dbl&gt; 1.609568e+15, 1.609568e+15, 1.609568e+15, 1.6095…\n$ user_pseudo_id        &lt;chr&gt; \"1005484.1092567297\", \"1005484.1092567297\", \"100…\n$ gclsrc                &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ debug_mode            &lt;chr&gt; \"1\", \"1\", NA, \"1\", NA, \"1\", NA, \"1\", NA, NA, \"1\"…\n$ page_title            &lt;chr&gt; \"YouTube | Shop by Brand | Google Merchandise St…\n$ engagement_time_msec  &lt;chr&gt; \"26\", \"11872\", NA, NA, NA, NA, NA, \"4\", NA, NA, …\n$ session_engaged       &lt;chr&gt; \"1\", \"1\", \"1\", \"0\", NA, \"0\", NA, \"1\", NA, \"1\", \"…\n$ ga_session_number     &lt;chr&gt; \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", \"2\", \"1\", \"1\", \"1\"…\n$ engaged_session_event &lt;chr&gt; \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", NA, \"1\", \"1\", \"1\",…\n$ ga_session_id         &lt;chr&gt; \"2718913892\", \"2718913892\", \"2718913892\", \"27189…\n$ gclid                 &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ page_location         &lt;chr&gt; \"https://shop.googlemerchandisestore.com/Google+…\n$ all_data              &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ entrances             &lt;chr&gt; NA, NA, NA, \"1\", NA, \"1\", NA, NA, NA, NA, \"1\", N…\n$ clean_event           &lt;chr&gt; NA, NA, NA, \"gtm.js\", NA, \"gtm.js\", NA, NA, NA, …\n$ page_referrer         &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ medium                &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ term                  &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ campaign              &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ source                &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ percent_scrolled      &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ currency              &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ unique_search_term    &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ search_term           &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ dclid                 &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ outbound              &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ link_domain           &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ link_url              &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ transaction_id        &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ shipping_tier         &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ promotion_name        &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ coupon                &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ tax                   &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ value                 &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ payment_type          &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n\n\n\n\nCode\n# ── Step 3: Flatten ecommerce struct ──────────────────────────────────────────\nga4_ecomm &lt;- ga4_qs |&gt;\n  select(event_date, event_name, event_timestamp, user_pseudo_id, ecommerce) |&gt;\n  unnest_wider(ecommerce, names_sep = \"_\")\n\n# ── Step 4: Join all together ─────────────────────────────────────────────────\nga4_master &lt;- ga4_structs |&gt;\n  left_join(\n    ga4_params,\n    by = c(\"event_date\", \"event_name\", \"event_timestamp\", \"user_pseudo_id\")\n  ) |&gt;\n  left_join(\n    ga4_ecomm,\n    by = c(\"event_date\", \"event_name\", \"event_timestamp\", \"user_pseudo_id\")\n  ) |&gt;\n  # Convert event_timestamp (microseconds since Unix epoch) to datetime\n  mutate(\n    event_dt = as.POSIXct(\n      as.numeric(event_timestamp) / 1e6,\n      origin = \"1970-01-01\",\n      tz = \"America/Los_Angeles\" # GA4 obfuscated dataset is in US/Pacific\n    ),\n    event_date = ymd(event_date)\n  )\n\nglimpse(ga4_master)\n\n\nRows: 144\nColumns: 71\n$ event_date                        &lt;date&gt; 2021-01-02, 2021-01-02, 2021-01-02,…\n$ event_name                        &lt;chr&gt; \"purchase\", \"purchase\", \"purchase\", …\n$ event_timestamp                   &lt;dbl&gt; 1.609619e+15, 1.609558e+15, 1.609615…\n$ user_pseudo_id                    &lt;chr&gt; \"1055969.5872512303\", \"3024189.61016…\n$ device_category                   &lt;chr&gt; \"mobile\", \"mobile\", \"mobile\", \"mobil…\n$ device_mobile_brand_name          &lt;chr&gt; \"Samsung\", \"Apple\", \"Xiaomi\", \"Apple…\n$ device_mobile_model_name          &lt;chr&gt; \"&lt;Other&gt;\", \"iPhone\", \"&lt;Other&gt;\", \"iPh…\n$ device_mobile_marketing_name      &lt;chr&gt; \"&lt;Other&gt;\", \"&lt;Other&gt;\", \"&lt;Other&gt;\", \"&lt;O…\n$ device_mobile_os_hardware_model   &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ device_operating_system           &lt;chr&gt; \"Web\", \"iOS\", \"Android\", \"Web\", \"And…\n$ device_operating_system_version   &lt;chr&gt; \"&lt;Other&gt;\", \"iOS 14.2\", \"&lt;Other&gt;\", \"&lt;…\n$ device_vendor_id                  &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ device_advertising_id             &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ device_language                   &lt;chr&gt; \"en-us\", \"zh\", NA, \"en-us\", NA, NA, …\n$ device_is_limited_ad_tracking     &lt;chr&gt; \"No\", \"No\", \"No\", \"No\", \"No\", \"No\", …\n$ device_time_zone_offset_seconds   &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ device_web_info                   &lt;list&gt; [[\"Chrome\", \"87.0\"]], [[\"Safari\", \"…\n$ geo_continent                     &lt;chr&gt; \"Americas\", \"Americas\", \"Americas\", …\n$ geo_sub_continent                 &lt;chr&gt; \"Northern America\", \"Northern Americ…\n$ geo_country                       &lt;chr&gt; \"United States\", \"United States\", \"U…\n$ geo_region                        &lt;chr&gt; \"Florida\", \"Colorado\", \"Pennsylvania…\n$ geo_city                          &lt;chr&gt; \"(not set)\", \"(not set)\", \"Philadelp…\n$ geo_metro                         &lt;chr&gt; \"(not set)\", \"(not set)\", \"(not set)…\n$ traffic_source_medium             &lt;chr&gt; \"referral\", \"organic\", \"organic\", \"&lt;…\n$ traffic_source_name               &lt;chr&gt; \"(referral)\", \"(organic)\", \"(organic…\n$ traffic_source_source             &lt;chr&gt; \"shop.googlemerchandisestore.com\", \"…\n$ gclsrc                            &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ debug_mode                        &lt;chr&gt; \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", \"…\n$ page_title                        &lt;chr&gt; \"Checkout Confirmation\", \"Checkout C…\n$ engagement_time_msec              &lt;chr&gt; \"5\", \"11\", \"1\", \"4\", \"4\", \"1\", \"7\", …\n$ session_engaged                   &lt;chr&gt; \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", \"…\n$ ga_session_number                 &lt;chr&gt; \"2\", \"4\", \"1\", \"1\", \"1\", \"1\", \"3\", \"…\n$ engaged_session_event             &lt;chr&gt; \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", \"1\", \"…\n$ ga_session_id                     &lt;chr&gt; \"5298604884\", \"7859325572\", \"7961433…\n$ gclid                             &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ page_location                     &lt;chr&gt; \"https://shop.googlemerchandisestore…\n$ all_data                          &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ entrances                         &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ clean_event                       &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ page_referrer                     &lt;chr&gt; \"https://shop.googlemerchandisestore…\n$ medium                            &lt;chr&gt; \"referral\", \"referral\", \"organic\", \"…\n$ term                              &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ campaign                          &lt;chr&gt; \"(referral)\", \"(referral)\", \"(organi…\n$ source                            &lt;chr&gt; \"shop.googlemerchandisestore.com\", \"…\n$ percent_scrolled                  &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ currency                          &lt;chr&gt; \"USD\", \"USD\", \"USD\", \"USD\", \"USD\", \"…\n$ unique_search_term                &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ search_term                       &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ dclid                             &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ outbound                          &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ link_domain                       &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ link_url                          &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ transaction_id                    &lt;chr&gt; \"4256792636\", \"2073562964\", NA, \"737…\n$ shipping_tier                     &lt;chr&gt; \"FedEx Ground\", \"FedEx Ground\", NA, …\n$ promotion_name                    &lt;chr&gt; \"reach new heights\", NA, \"reach new …\n$ coupon                            &lt;chr&gt; \"7365791999877465472\", \"906187848818…\n$ tax                               &lt;chr&gt; \"0\", \"1.17\", NA, \"4.98\", \"4.46\", \"1.…\n$ value                             &lt;chr&gt; \"7\", \"13\", NA, \"48\", \"41.6\", \"10.5\",…\n$ payment_type                      &lt;chr&gt; \"Pay with credit card\", \"Pay with cr…\n$ ecommerce_total_item_quantity     &lt;dbl&gt; 1, 1, NA, 1, 4, 3, 1, 27, 6, 4, 4, 6…\n$ ecommerce_purchase_revenue_in_usd &lt;dbl&gt; 7, 13, 0, 48, 42, 11, 63, 87, 21, 16…\n$ ecommerce_purchase_revenue        &lt;dbl&gt; 7, 13, NA, 48, 42, 11, 63, 87, 21, 1…\n$ ecommerce_refund_value_in_usd     &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ ecommerce_refund_value            &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ ecommerce_shipping_value_in_usd   &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ ecommerce_shipping_value          &lt;dbl&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, …\n$ ecommerce_tax_value_in_usd        &lt;dbl&gt; 0, 1, NA, 5, 4, 2, 6, 0, 0, 13, 4, 0…\n$ ecommerce_tax_value               &lt;dbl&gt; 0, 1, NA, 5, 4, 2, 6, 0, 0, 13, 4, 0…\n$ ecommerce_unique_items            &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 4, 4, …\n$ ecommerce_transaction_id          &lt;chr&gt; \"792636\", \"562964\", \"(not set)\", \"70…\n$ event_dt                          &lt;dttm&gt; 2021-01-02 12:17:19, 2021-01-01 19:…\n\n\n\n\nCode\ncat(\n  \"Master table dimensions:\",\n  nrow(ga4_master),\n  \"rows ×\",\n  ncol(ga4_master),\n  \"columns\\n\",\n  \"Date range:\",\n  format(min(ga4_master$event_date)),\n  \"to\",\n  format(max(ga4_master$event_date)),\n  \"\\n\",\n  \"Unique users:\",\n  n_distinct(ga4_master$user_pseudo_id),\n  \"\\n\",\n  \"Unique event types:\",\n  n_distinct(ga4_master$event_name),\n  \"\\n\"\n)\n\n\nMaster table dimensions: 144 rows × 71 columns\n Date range: 2021-01-01 to 2021-01-07 \n Unique users: 136 \n Unique event types: 1",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#traffic-analysis",
+    "href": "hierarchical-data-II.html#traffic-analysis",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "1.2 Analysis 1: Traffic Source Performance",
+    "text": "1.2 Analysis 1: Traffic Source Performance\nMarketing Question: Which channels are driving the most engaged traffic?\n\n\nCode\ntraffic_analysis &lt;- ga4_master |&gt;\n  filter(event_name == \"user_engagement\") |&gt;\n  mutate(\n    # Clean and standardise channel labels\n    medium = case_when(\n      is.na(traffic_source_medium) ~ \"(none)\",\n      traffic_source_medium == \"(none)\" ~ \"direct\",\n      traffic_source_medium == \"organic\" ~ \"organic search\",\n      traffic_source_medium %in% c(\"cpc\", \"ppc\", \"paid\") ~ \"paid search\",\n      str_detect(traffic_source_medium, \"email\") ~ \"email\",\n      str_detect(\n        traffic_source_medium,\n        \"social|referral\"\n      ) ~ traffic_source_medium,\n      TRUE ~ traffic_source_medium\n    )\n  ) |&gt;\n  group_by(medium) |&gt;\n  summarise(\n    sessions = n(),\n    unique_users = n_distinct(user_pseudo_id),\n    .groups = \"drop\"\n  ) |&gt;\n  # Join in engagement and conversion metrics from full event stream\n  left_join(\n    ga4_master |&gt;\n      filter(event_name == \"session_start\") |&gt;\n      mutate(\n        medium = case_when(\n          is.na(traffic_source_medium) ~ \"(none)\",\n          traffic_source_medium == \"(none)\" ~ \"direct\",\n          traffic_source_medium == \"organic\" ~ \"organic search\",\n          traffic_source_medium %in% c(\"cpc\", \"ppc\", \"paid\") ~ \"paid search\",\n          str_detect(traffic_source_medium, \"email\") ~ \"email\",\n          TRUE ~ traffic_source_medium\n        )\n      ) |&gt;\n      group_by(medium, user_pseudo_id) |&gt;\n      summarise(.groups = \"drop\") |&gt;\n      left_join(\n        ga4_master |&gt;\n          filter(event_name == \"purchase\") |&gt;\n          distinct(user_pseudo_id) |&gt;\n          mutate(converted = TRUE),\n        by = \"user_pseudo_id\"\n      ) |&gt;\n      group_by(medium) |&gt;\n      summarise(\n        users_who_purchased = sum(!is.na(converted)),\n        .groups = \"drop\"\n      ),\n    by = \"medium\"\n  ) |&gt;\n  mutate(\n    conversion_rate = users_who_purchased / unique_users,\n    sessions_pct = sessions / sum(sessions)\n  ) |&gt;\n  arrange(desc(sessions))\n\ntraffic_analysis\n\n\n\n  \n\n\n\n\n\nCode\n# ── Panel A: Session Volume by Channel ────────────────────────────────────────\nlibrary(scales)\np1 &lt;- traffic_analysis |&gt;\n  filter(sessions &gt; 10) |&gt;\n  mutate(medium = fct_reorder(medium, sessions)) |&gt;\n  ggplot(aes(x = medium, y = sessions, fill = medium)) +\n  geom_col(show.legend = FALSE, width = 0.65) +\n  geom_text(\n    aes(label = comma(sessions)),\n    hjust = -0.15,\n    size = 3.5\n  ) +\n  coord_flip() +\n  scale_y_continuous(\n    labels = comma,\n    expand = expansion(mult = c(0, 0.18))\n  ) +\n  scale_fill_brewer(palette = \"Set2\") +\n  labs(\n    title = \"Sessions by Traffic Channel\",\n    subtitle = \"Jan 1–7, 2021 · Google Merchandise Store\",\n    x = NULL,\n    y = \"Sessions\"\n  )\n\n# ── Panel B: Conversion Rate by Channel ───────────────────────────────────────\np2 &lt;- traffic_analysis |&gt;\n  filter(sessions &gt; 10, !is.na(conversion_rate)) |&gt;\n  mutate(medium = fct_reorder(medium, conversion_rate)) |&gt;\n  ggplot(aes(x = medium, y = conversion_rate, fill = medium)) +\n  geom_col(show.legend = FALSE, width = 0.65) +\n  geom_text(\n    aes(label = percent(conversion_rate, accuracy = 0.1)),\n    hjust = -0.15,\n    size = 3.5\n  ) +\n  coord_flip() +\n  scale_y_continuous(\n    labels = percent,\n    expand = expansion(mult = c(0, 0.22))\n  ) +\n  scale_fill_brewer(palette = \"Set2\") +\n  labs(\n    title = \"Purchase Conversion Rate by Channel\",\n    subtitle = \"Users who completed a purchase ÷ users who started a session\",\n    x = NULL,\n    y = \"Conversion Rate\"\n  )\n\n# Display side by side using patchwork if available, else stacked\nif (requireNamespace(\"patchwork\", quietly = TRUE)) {\n  library(patchwork)\n  p1 + p2\n} else {\n  print(p1)\n  print(p2)\n}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTipMarketing Interpretation\n\n\n\n\nVolume vs. quality: The channel with the most sessions is not necessarily the best performer. Compare session volume against conversion rate to identify high-value channels.\nDirect traffic often represents users who already know the brand — expect higher conversion rates.\nOrganic search volume indicates SEO health; low conversion from organic can signal a landing page or audience-fit problem.",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#device-geo",
+    "href": "hierarchical-data-II.html#device-geo",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "1.3 Analysis 2: Device and Geographic Breakdown",
+    "text": "1.3 Analysis 2: Device and Geographic Breakdown\nMarketing Question: Where are users coming from, and on what devices?\n\n\nCode\n# Daily sessions by device category\ndaily_device &lt;- ga4_master |&gt;\n  filter(event_name == \"session_start\") |&gt;\n  count(event_date, device_category) |&gt;\n  mutate(device_category = str_to_title(device_category))\n\n# Geographic distribution — top countries\ntop_countries &lt;- ga4_master |&gt;\n  filter(event_name == \"session_start\") |&gt;\n  count(geo_country, sort = TRUE) |&gt;\n  filter(!is.na(geo_country)) |&gt;\n  slice_head(n = 15) |&gt;\n  mutate(\n    pct = n / sum(n),\n    geo_country = fct_reorder(geo_country, n)\n  )\n\n# Browser share (for device-specific targeting decisions)\nbrowser_share &lt;- ga4_master |&gt;\n  filter(event_name == \"session_start\") |&gt;\n  count(device_browser, device_category) |&gt;\n  filter(!is.na(device_browser)) |&gt;\n  group_by(device_category) |&gt;\n  mutate(pct = n / sum(n)) |&gt;\n  slice_max(pct, n = 5) |&gt;\n  ungroup()\n\n\n\n\nCode\ndaily_device |&gt;\n  ggplot(aes(\n    x = event_date,\n    y = n,\n    colour = device_category,\n    group = device_category\n  )) +\n  geom_line(linewidth = 1.1) +\n  geom_point(size = 2.5) +\n  scale_x_date(date_labels = \"%a\\n%b %d\", date_breaks = \"1 day\") +\n  scale_y_continuous(labels = comma) +\n  scale_colour_manual(\n    values = c(\n      \"Desktop\" = \"#4285F4\",\n      \"Mobile\" = \"#34A853\",\n      \"Tablet\" = \"#FBBC05\"\n    )\n  ) +\n  labs(\n    title = \"Daily Sessions by Device Category\",\n    subtitle = \"Jan 1–7, 2021 · Google Merchandise Store\",\n    x = NULL,\n    y = \"Sessions\",\n    colour = \"Device\"\n  ) +\n  theme(legend.position = \"top\")\n\n\n\n\nCode\nlibrary(glue)\n\ntop_countries |&gt;\n  ggplot(aes(x = geo_country, y = n, fill = pct)) +\n  geom_col(width = 0.7) +\n  geom_text(\n    aes(label = glue(\"{comma(n)}\\n({percent(pct, accuracy = 0.1)})\")),\n    hjust = -0.1,\n    size = 3,\n    lineheight = 0.9\n  ) +\n  coord_flip() +\n  scale_y_continuous(\n    labels = comma,\n    expand = expansion(mult = c(0, 0.25))\n  ) +\n  scale_fill_gradient(\n    low = \"#c6dbef\",\n    high = \"#2171b5\",\n    labels = percent,\n    name = \"% of Sessions\"\n  ) +\n  labs(\n    title = \"Sessions by Country (Top 15)\",\n    subtitle = \"Jan 1–7, 2021 · Google Merchandise Store\",\n    x = NULL,\n    y = \"Sessions\"\n  )\n\n\n\n\nCode\nbrowser_share |&gt;\n  mutate(device_browser = fct_reorder(device_browser, pct)) |&gt;\n  ggplot(aes(\n    x = device_category,\n    y = device_browser,\n    fill = pct,\n    label = percent(pct, accuracy = 0.1)\n  )) +\n  geom_tile(colour = \"white\", linewidth = 0.8) +\n  geom_text(size = 3.5, fontface = \"bold\") +\n  scale_fill_gradient(\n    low = \"#f7fbff\",\n    high = \"#2171b5\",\n    labels = percent,\n    name = \"Share\"\n  ) +\n  labs(\n    title = \"Browser Share by Device Category (Top 5 per Device)\",\n    subtitle = \"Useful for QA testing priority decisions\",\n    x = \"Device Category\",\n    y = \"Browser\"\n  ) +\n  theme(panel.grid = element_blank())",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#content-analysis",
+    "href": "hierarchical-data-II.html#content-analysis",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "1.4 Analysis 3: Content Performance",
+    "text": "1.4 Analysis 3: Content Performance\nMarketing Question: Which pages attract the most traffic, and how do users navigate the site?\nThis analysis requires extracting page_location from event_params — a direct application of the key-value pipeline we built in Part 2.\n\n\nCode\npage_views &lt;- ga4_master |&gt;\n  filter(event_name == \"page_view\", !is.na(page_location)) |&gt;\n  mutate(\n    # Parse the URL path from the full URL\n    page_path = str_remove(page_location, \"^https?://[^/]+\"),\n    page_path = str_remove(page_path, \"\\\\?.*$\"), # Remove query strings\n    page_path = str_remove(page_path, \"#.*$\"), # Remove anchors\n    page_path = if_else(page_path == \"\" | is.na(page_path), \"/\", page_path),\n\n    # Categorise pages into sections for rolled-up analysis\n    page_section = case_when(\n      page_path == \"/\" ~ \"Home\",\n      str_detect(page_path, \"^/google\\\\+re|^/store|^/shop\") ~ \"Store\",\n      str_detect(page_path, \"^/product\") ~ \"Product Pages\",\n      str_detect(page_path, \"^/basket|^/cart\") ~ \"Cart\",\n      str_detect(page_path, \"^/checkout\") ~ \"Checkout\",\n      str_detect(page_path, \"^/signin|^/log\") ~ \"Sign In\",\n      str_detect(page_path, \"^/brands\") ~ \"Brands\",\n      TRUE ~ \"Other\"\n    )\n  )\n\n# Top individual pages\ntop_pages &lt;- page_views |&gt;\n  count(page_path, page_section, sort = TRUE) |&gt;\n  slice_head(n = 20)\n\n# Page section rollup\nsection_rollup &lt;- page_views |&gt;\n  count(page_section, sort = TRUE) |&gt;\n  mutate(\n    pct = n / sum(n),\n    page_section = fct_reorder(page_section, n)\n  )\n\n\n\n\nCode\ntop_pages |&gt;\n  slice_head(n = 15) |&gt;\n  mutate(\n    page_path = str_trunc(page_path, 45),\n    page_path = fct_reorder(page_path, n)\n  ) |&gt;\n  ggplot(aes(x = page_path, y = n, fill = page_section)) +\n  geom_col(width = 0.7) +\n  geom_text(\n    aes(label = comma(n)),\n    hjust = -0.15,\n    size = 3.5\n  ) +\n  coord_flip() +\n  scale_y_continuous(\n    labels = comma,\n    expand = expansion(mult = c(0, 0.18))\n  ) +\n  scale_fill_brewer(palette = \"Set2\", name = \"Section\") +\n  labs(\n    title = \"Top 15 Pages by Page Views\",\n    subtitle = \"Jan 1–7, 2021 · Colour = site section\",\n    x = NULL,\n    y = \"Page Views\"\n  ) +\n  theme(legend.position = \"bottom\")\n\n\n\n\n\n\n\n\n\n\n\nCode\nsection_rollup |&gt;\n  ggplot(aes(x = page_section, y = n, fill = page_section)) +\n  geom_col(show.legend = FALSE, width = 0.65) +\n  geom_text(\n    aes(label = glue(\"{comma(n)}\\n{percent(pct, accuracy = 0.1)}\")),\n    vjust = -0.4,\n    size = 3.5,\n    lineheight = 0.9\n  ) +\n  scale_y_continuous(\n    labels = comma,\n    expand = expansion(mult = c(0, 0.2))\n  ) +\n  scale_fill_brewer(palette = \"Paired\") +\n  labs(\n    title = \"Page Views by Site Section\",\n    subtitle = \"Rolled-up view using URL path categorisation\",\n    x = NULL,\n    y = \"Page Views\"\n  )\n\n\n\n\nCode\n# What external pages referred traffic to the site?\ntop_referrers &lt;- ga4_master |&gt;\n  filter(\n    event_name == \"page_view\",\n    !is.na(page_referrer),\n    page_referrer != \"\",\n    !str_detect(page_referrer, \"google\\\\.com/merchandise|merch\\\\.google\")\n  ) |&gt;\n  mutate(\n    referrer_domain = str_extract(page_referrer, \"(?&lt;=://)[^/]+\"),\n    referrer_domain = str_remove(referrer_domain, \"^www\\\\.\")\n  ) |&gt;\n  count(referrer_domain, sort = TRUE) |&gt;\n  filter(!is.na(referrer_domain)) |&gt;\n  slice_head(n = 10)\n\ntop_referrers |&gt;\n  gt() |&gt;\n  tab_header(\n    title = \"Top 10 Referring Domains\",\n    subtitle = \"External sites sending traffic to Google Merchandise Store\"\n  ) |&gt;\n  fmt_number(columns = n, decimals = 0) |&gt;\n  cols_label(referrer_domain = \"Referring Domain\", n = \"Referrals\") |&gt;\n  opt_stylize(style = 1)",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#ecommerce-analysis",
+    "href": "hierarchical-data-II.html#ecommerce-analysis",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "1.5 Analysis 4: E-commerce Funnel",
+    "text": "1.5 Analysis 4: E-commerce Funnel\nMarketing Question: Where in the purchase funnel are we losing customers?\n\n\nCode\n# Define funnel stages and their GA4 event names\nfunnel_stages &lt;- tibble(\n  stage_order = 1:6,\n  event_name = c(\n    \"view_item\",\n    \"add_to_cart\",\n    \"view_cart\",\n    \"begin_checkout\",\n    \"add_payment_info\",\n    \"purchase\"\n  ),\n  stage_label = c(\n    \"View Item\",\n    \"Add to Cart\",\n    \"View Cart\",\n    \"Begin Checkout\",\n    \"Add Payment Info\",\n    \"Purchase\"\n  )\n)\n\n# Count unique users at each funnel stage\nfunnel_data &lt;- funnel_stages |&gt;\n  left_join(\n    ga4_master |&gt;\n      filter(event_name %in% funnel_stages$event_name) |&gt;\n      group_by(event_name) |&gt;\n      summarise(users = n_distinct(user_pseudo_id), .groups = \"drop\"),\n    by = \"event_name\"\n  ) |&gt;\n  arrange(stage_order) |&gt;\n  mutate(\n    users = replace_na(users, 0),\n    top_users = max(users),\n    pct_of_top = users / top_users,\n    pct_prev = users / lag(users), # Drop-off to previous stage\n    drop_off = 1 - pct_prev\n  )\n\nfunnel_data |&gt;\n  select(stage_label, users, pct_of_top, pct_prev, drop_off) |&gt;\n  gt() |&gt;\n  tab_header(\n    title = \"Purchase Funnel Analysis\",\n    subtitle = \"Unique users reaching each stage · Jan 1–7, 2021\"\n  ) |&gt;\n  fmt_number(columns = users, decimals = 0) |&gt;\n  fmt_percent(columns = c(pct_of_top, pct_prev, drop_off), decimals = 1) |&gt;\n  cols_label(\n    stage_label = \"Funnel Stage\",\n    users = \"Users\",\n    pct_of_top = \"% of Top Stage\",\n    pct_prev = \"Retained from Prior\",\n    drop_off = \"Drop-off Rate\"\n  ) |&gt;\n  data_color(\n    columns = drop_off,\n    method = \"numeric\",\n    palette = c(\"#ffffff\", \"#f4433620\"),\n    na_color = \"white\"\n  ) |&gt;\n  sub_missing(missing_text = \"—\") |&gt;\n  opt_stylize(style = 1)\n\n\n\n\nCode\nfunnel_data |&gt;\n  mutate(stage_label = fct_inorder(stage_label)) |&gt;\n  ggplot(aes(x = stage_label, y = users)) +\n  geom_col(\n    aes(fill = pct_of_top),\n    width = 0.75,\n    show.legend = FALSE\n  ) +\n  geom_text(\n    aes(\n      label = glue(\n        \"{comma(users)} users\\n({percent(pct_of_top, accuracy=0.1)})\"\n      )\n    ),\n    vjust = -0.4,\n    size = 3.5,\n    lineheight = 0.85,\n    fontface = \"bold\"\n  ) +\n  # Annotate drop-off rates between bars\n  geom_text(\n    data = funnel_data |&gt; filter(!is.na(drop_off)),\n    aes(\n      x = as.numeric(fct_inorder(stage_label)) - 0.5,\n      y = max(funnel_data$users) * 0.55,\n      label = glue(\"▼ {percent(drop_off, accuracy=1)}\\ndrop-off\")\n    ),\n    size = 3,\n    colour = \"#e53935\",\n    lineheight = 0.85\n  ) +\n  scale_y_continuous(\n    labels = comma,\n    expand = expansion(mult = c(0, 0.2))\n  ) +\n  scale_fill_gradient(low = \"#bbdefb\", high = \"#1565c0\") +\n  labs(\n    title = \"Purchase Funnel: Users by Stage\",\n    subtitle = \"Jan 1–7, 2021 · Google Merchandise Store\",\n    x = NULL,\n    y = \"Unique Users\"\n  ) +\n  theme(axis.text.x = element_text(size = 10))\n\n\n\n\nCode\nlibrary(gt)\n# Revenue analysis using the flattened ecommerce struct\nrevenue_daily &lt;- ga4_master |&gt;\n  filter(event_name == \"purchase\") |&gt;\n  group_by(event_date) |&gt;\n  summarise(\n    transactions = n(),\n    total_revenue = sum(\n      as.numeric(ecommerce_purchase_revenue_in_usd),\n      na.rm = TRUE\n    ),\n    avg_order_value = mean(\n      as.numeric(ecommerce_purchase_revenue_in_usd),\n      na.rm = TRUE\n    ),\n    unique_buyers = n_distinct(user_pseudo_id),\n    .groups = \"drop\"\n  )\n\nrevenue_daily |&gt;\n  gt() |&gt;\n  tab_header(\n    title = \"Daily Revenue Summary\",\n    subtitle = \"Derived from ecommerce struct (Pattern 1 unnesting)\"\n  ) |&gt;\n  fmt_date(columns = event_date, date_style = \"day_m_year\") |&gt;\n  fmt_number(columns = transactions, decimals = 0) |&gt;\n  fmt_currency(columns = c(total_revenue, avg_order_value), currency = \"USD\") |&gt;\n  fmt_number(columns = unique_buyers, decimals = 0) |&gt;\n  cols_label(\n    event_date = \"Date\",\n    transactions = \"Transactions\",\n    total_revenue = \"Revenue\",\n    avg_order_value = \"Avg. Order Value\",\n    unique_buyers = \"Unique Buyers\"\n  ) |&gt;\n  grand_summary_rows(\n    columns = c(transactions, total_revenue, unique_buyers),\n    fns = list(Total = ~ sum(., na.rm = TRUE)),\n    fmt = list(\n      ~ fmt_number(., columns = c(transactions, unique_buyers), decimals = 0),\n      ~ fmt_currency(., columns = total_revenue, currency = \"USD\")\n    )\n  ) |&gt;\n  opt_stylize(style = 1)\n\n\n\n\nCode\nrevenue_daily |&gt;\n  ggplot(aes(x = event_date)) +\n  geom_col(\n    aes(y = total_revenue),\n    fill = \"#1565c0\",\n    width = 0.6,\n    alpha = 0.85\n  ) +\n  geom_line(\n    aes(y = avg_order_value * (max(total_revenue) / max(avg_order_value))),\n    colour = \"#e65100\",\n    linewidth = 1.2\n  ) +\n  geom_point(\n    aes(y = avg_order_value * (max(total_revenue) / max(avg_order_value))),\n    colour = \"#e65100\",\n    size = 3\n  ) +\n  scale_x_date(date_labels = \"%a\\n%b %d\", date_breaks = \"1 day\") +\n  scale_y_continuous(\n    labels = dollar,\n    name = \"Total Revenue (bars)\",\n    sec.axis = sec_axis(\n      trans = ~ . *\n        (max(revenue_daily$avg_order_value) /\n          max(revenue_daily$total_revenue)),\n      name = \"Avg. Order Value (line)\",\n      labels = dollar\n    )\n  ) +\n  labs(\n    title = \"Daily Revenue and Average Order Value\",\n    subtitle = \"Bars = total revenue · Orange line = avg order value\",\n    x = NULL\n  )",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#engagement",
+    "href": "hierarchical-data-II.html#engagement",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "1.6 Analysis 5: Session Engagement Deep-Dive",
+    "text": "1.6 Analysis 5: Session Engagement Deep-Dive\nMarketing Question: Are sessions actually engaging, and which channels drive the most engaged sessions?\nThis combines event_params extraction (Pattern 3) with struct unnesting (Pattern 1) in a single pipeline:\n\n\nCode\nsession_engagement &lt;- ga4_master |&gt;\n  filter(event_name == \"session_start\") |&gt;\n  mutate(\n    # session_engaged comes from event_params (Pattern 3 — already flattened)\n    is_engaged = session_engaged == \"1\",\n    ga_session_num = as.integer(ga_session_number),\n    # device_category from device struct (Pattern 1 — already flattened)\n    device = str_to_title(device_category),\n    # traffic_source_medium from traffic_source struct (Pattern 1)\n    channel = case_when(\n      is.na(traffic_source_medium) |\n        traffic_source_medium == \"(none)\" ~ \"Direct\",\n      traffic_source_medium == \"organic\" ~ \"Organic Search\",\n      traffic_source_medium %in%\n        c(\"cpc\", \"ppc\", \"paid\") ~ \"Paid Search\",\n      str_detect(traffic_source_medium, \"email\") ~ \"Email\",\n      str_detect(traffic_source_medium, \"social\") ~ \"Social\",\n      TRUE ~ str_to_title(traffic_source_medium)\n    )\n  ) |&gt;\n  group_by(channel, device) |&gt;\n  summarise(\n    sessions = n(),\n    engaged_sessions = sum(is_engaged, na.rm = TRUE),\n    engagement_rate = mean(is_engaged, na.rm = TRUE),\n    new_user_sessions = sum(ga_session_num == 1, na.rm = TRUE),\n    returning_sessions = sum(ga_session_num &gt; 1, na.rm = TRUE),\n    .groups = \"drop\"\n  ) |&gt;\n  filter(sessions &gt;= 20) # Filter to statistically meaningful segments\n\nsession_engagement\n\n\n\n  \n\n\n\n\n\nCode\nsession_engagement |&gt;\n  ggplot(aes(\n    x = device,\n    y = fct_reorder(channel, engagement_rate),\n    fill = engagement_rate\n  )) +\n  geom_tile(colour = \"white\", linewidth = 1) +\n  geom_text(\n    aes(label = percent(engagement_rate, accuracy = 1)),\n    fontface = \"bold\",\n    size = 4\n  ) +\n  scale_fill_gradient2(\n    low = \"#d32f2f\",\n    mid = \"#fff176\",\n    high = \"#388e3c\",\n    midpoint = 0.55,\n    labels = percent,\n    name = \"Engagement\\nRate\"\n  ) +\n  labs(\n    title = \"Session Engagement Rate by Channel × Device\",\n    subtitle = glue(\n      \"Engagement rate = % of sessions meeting Google's engagement criteria\\n\",\n      \"(session_engaged parameter from event_params — Pattern 3 rectangling)\"\n    ),\n    x = \"Device Category\",\n    y = \"Traffic Channel\"\n  ) +\n  theme(\n    panel.grid = element_blank(),\n    axis.text = element_text(size = 11)\n  )\n\n\n\n\n\n\n\n\nTipWhat is an “Engaged Session” in GA4?\n\n\n\nGA4 defines an engaged session as one that meets at least one of:\n\nLasts longer than 10 seconds\nHas at least 2 page views or screen views\nHas a conversion event\n\nThe session_engaged parameter (value \"1\" or \"0\") in event_params is how GA4 records this classification. We extracted it using the Pattern 3 pipeline from Part 2.",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#what-we-covered",
+    "href": "hierarchical-data-II.html#what-we-covered",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "4.1 What We Covered",
+    "text": "4.1 What We Covered\nThis document extended R4DS Chapter 23 in two important directions:\n\n4.1.1 From R4DS (Applied to GA4)\n\n\n\n\n\n\n\nTool\nGA4 Use Case\n\n\n\n\nunnest_wider()\nFlatten device, geo, traffic_source, ecommerce struct columns\n\n\nunnest_longer()\nExpand items array and first-stage expansion of event_params\n\n\nhoist()\nFast targeted extraction of specific struct fields\n\n\nBoth combined\nFully rectangling the items repeated struct array\n\n\n\n\n\n4.1.2 Beyond R4DS (GA4-Specific)\n\n\n\n\n\n\n\nProblem\nSolution\n\n\n\n\nKey-value struct arrays (event_params)\n3-stage pipeline: unnest_longer() → unnest_wider() ×2 → coalesce() → pivot_wider()\n\n\nUnion-type value structs\ndplyr::coalesce() across the four typed value columns\n\n\nBigQuery INT64 types\nbigint = \"numeric\" in bq_table_download()\n\n\nScale/performance\nDownload once → cache as .qs → load locally",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#the-three-patterns-at-a-glance",
+    "href": "hierarchical-data-II.html#the-three-patterns-at-a-glance",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "4.2 The Three Patterns at a Glance",
+    "text": "4.2 The Three Patterns at a Glance\n\n\n\n\n\n\n\n\nRectangling Function Reference\n\n\nSteps 1a–1b cover R4DS Ch. 23 · Steps 3b–3c supplement it for GA4\n\n\nStep\nFunction\nInput Shape\nOutput Shape\n\n\n\n\n1a\nunnest_wider()\nlist of named lists\nnew atomic columns\n\n\n1b\nhoist()\nlist of named lists\nselected atomic columns\n\n\n2\nunnest_longer()\nlist of tibbles (array)\none row per array element\n\n\n3a\nunnest_wider()\none tibble-row per element\nnamed columns per field\n\n\n3b\ncoalesce()\nmultiple typed value cols\none unified value column\n\n\n3c\npivot_wider()\nlong key-value rows\none column per key",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
+    ]
+  },
+  {
+    "objectID": "hierarchical-data-II.html#further-reading",
+    "href": "hierarchical-data-II.html#further-reading",
+    "title": "Rectangling GA4 Hierarchical Data: Part II",
+    "section": "4.3 Further Reading",
+    "text": "4.3 Further Reading\n\n\n\nResource\nTopic\n\n\n\n\nR4DS Ch. 23\nFull rectangling toolkit foundation\n\n\nbigrquery docs\nBigQuery connection and download options\n\n\nGA4 BigQuery schema\nOfficial field reference\n\n\ntidyr vignette\nDeep dive into rectangling functions\n\n\npurrr cheat sheet\nList iteration patterns",
+    "crumbs": [
+      "Home",
+      "Rectangling GA4 Hierarchical Data: Part II"
     ]
   }
 ]

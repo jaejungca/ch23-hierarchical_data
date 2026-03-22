@@ -3,7 +3,7 @@ title: "GA4 BigQuery Analysis with Arrow & DuckDB"
 subtitle: "Demonstration of Efficient large-scale analytics in R using Positron"
 description: "This page shows how to work with GA4 data using Arrow & DuckDB"
 categories: [BigQuery, Arrow, Parquet, DuckDB, SQL]
-order: 3
+order: 4
 author: "Jae Jung"
 date: today
 format:
