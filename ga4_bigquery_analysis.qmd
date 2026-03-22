@@ -35,7 +35,7 @@ execute:
   freeze: auto
 ---
 
-# Setup
+# Setup{.unnumbered}
 
 ## Install & Load Packages
 
@@ -78,7 +78,7 @@ GA4 exports data to BigQuery in sharded daily tables named `events_YYYYMMDD`. Th
 #| label: bigquery-connection
 
 # ── Configuration ────────────────────────────────────────────────────────────
-GCP_PROJECT <- "ga4-bigquery-cppmsdm" # <-- change this
+GCP_PROJECT <- "Use Your Own Billable Project" # <-- change this
 BQ_PROJECT <- "bigquery-public-data"
 BQ_DATASET <- "ga4_obfuscated_sample_ecommerce"
 

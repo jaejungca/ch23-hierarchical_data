@@ -360,29 +360,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Contents</h2>
    
   <ul>
-  <li><a href="#setup" id="toc-setup" class="nav-link active" data-scroll-target="#setup"><span class="header-section-number">1</span> Setup</a>
+  <li><a href="#setup" id="toc-setup" class="nav-link active" data-scroll-target="#setup">Setup</a>
   <ul class="collapse">
-  <li><a href="#install-load-packages" id="toc-install-load-packages" class="nav-link" data-scroll-target="#install-load-packages"><span class="header-section-number">1.1</span> Install &amp; Load Packages</a></li>
+  <li><a href="#install-load-packages" id="toc-install-load-packages" class="nav-link" data-scroll-target="#install-load-packages"><span class="header-section-number">0.1</span> Install &amp; Load Packages</a></li>
   </ul></li>
-  <li><a href="#connect-to-bigquery" id="toc-connect-to-bigquery" class="nav-link" data-scroll-target="#connect-to-bigquery"><span class="header-section-number">2</span> 1. Connect to BigQuery</a></li>
-  <li><a href="#pull-data-from-bigquery-arrow-table" id="toc-pull-data-from-bigquery-arrow-table" class="nav-link" data-scroll-target="#pull-data-from-bigquery-arrow-table"><span class="header-section-number">3</span> 2. Pull Data from BigQuery → Arrow Table</a>
+  <li><a href="#connect-to-bigquery" id="toc-connect-to-bigquery" class="nav-link" data-scroll-target="#connect-to-bigquery"><span class="header-section-number">1</span> 1. Connect to BigQuery</a></li>
+  <li><a href="#pull-data-from-bigquery-arrow-table" id="toc-pull-data-from-bigquery-arrow-table" class="nav-link" data-scroll-target="#pull-data-from-bigquery-arrow-table"><span class="header-section-number">2</span> 2. Pull Data from BigQuery → Arrow Table</a>
   <ul class="collapse">
-  <li><a href="#a.-date-range-helper" id="toc-a.-date-range-helper" class="nav-link" data-scroll-target="#a.-date-range-helper"><span class="header-section-number">3.1</span> 2a. Date range helper</a></li>
-  <li><a href="#b.-bigquery-sql-flatten-ga4-nested-structs" id="toc-b.-bigquery-sql-flatten-ga4-nested-structs" class="nav-link" data-scroll-target="#b.-bigquery-sql-flatten-ga4-nested-structs"><span class="header-section-number">3.2</span> 2b. BigQuery SQL — flatten GA4 nested structs</a></li>
-  <li><a href="#c.-execute-capture-as-arrow-table" id="toc-c.-execute-capture-as-arrow-table" class="nav-link" data-scroll-target="#c.-execute-capture-as-arrow-table"><span class="header-section-number">3.3</span> 2c. Execute &amp; capture as Arrow Table</a></li>
+  <li><a href="#a.-date-range-helper" id="toc-a.-date-range-helper" class="nav-link" data-scroll-target="#a.-date-range-helper"><span class="header-section-number">2.1</span> 2a. Date range helper</a></li>
+  <li><a href="#b.-bigquery-sql-flatten-ga4-nested-structs" id="toc-b.-bigquery-sql-flatten-ga4-nested-structs" class="nav-link" data-scroll-target="#b.-bigquery-sql-flatten-ga4-nested-structs"><span class="header-section-number">2.2</span> 2b. BigQuery SQL — flatten GA4 nested structs</a></li>
+  <li><a href="#c.-execute-capture-as-arrow-table" id="toc-c.-execute-capture-as-arrow-table" class="nav-link" data-scroll-target="#c.-execute-capture-as-arrow-table"><span class="header-section-number">2.3</span> 2c. Execute &amp; capture as Arrow Table</a></li>
   </ul></li>
-  <li><a href="#register-arrow-table-in-duckdb" id="toc-register-arrow-table-in-duckdb" class="nav-link" data-scroll-target="#register-arrow-table-in-duckdb"><span class="header-section-number">4</span> 3. Register Arrow Table in DuckDB</a></li>
-  <li><a href="#analysis-with-duckdb-sql" id="toc-analysis-with-duckdb-sql" class="nav-link" data-scroll-target="#analysis-with-duckdb-sql"><span class="header-section-number">5</span> 4. Analysis with DuckDB SQL</a>
+  <li><a href="#register-arrow-table-in-duckdb" id="toc-register-arrow-table-in-duckdb" class="nav-link" data-scroll-target="#register-arrow-table-in-duckdb"><span class="header-section-number">3</span> 3. Register Arrow Table in DuckDB</a></li>
+  <li><a href="#analysis-with-duckdb-sql" id="toc-analysis-with-duckdb-sql" class="nav-link" data-scroll-target="#analysis-with-duckdb-sql"><span class="header-section-number">4</span> 4. Analysis with DuckDB SQL</a>
   <ul class="collapse">
-  <li><a href="#a.-daily-sessions-revenue" id="toc-a.-daily-sessions-revenue" class="nav-link" data-scroll-target="#a.-daily-sessions-revenue"><span class="header-section-number">5.1</span> 4a. Daily sessions &amp; revenue</a></li>
-  <li><a href="#b.-channel-performance" id="toc-b.-channel-performance" class="nav-link" data-scroll-target="#b.-channel-performance"><span class="header-section-number">5.2</span> 4b. Channel performance</a></li>
-  <li><a href="#c.-funnel-analysis" id="toc-c.-funnel-analysis" class="nav-link" data-scroll-target="#c.-funnel-analysis"><span class="header-section-number">5.3</span> 4c. Funnel analysis</a></li>
-  <li><a href="#d.-device-breakdown" id="toc-d.-device-breakdown" class="nav-link" data-scroll-target="#d.-device-breakdown"><span class="header-section-number">5.4</span> 4d. Device breakdown</a></li>
+  <li><a href="#a.-daily-sessions-revenue" id="toc-a.-daily-sessions-revenue" class="nav-link" data-scroll-target="#a.-daily-sessions-revenue"><span class="header-section-number">4.1</span> 4a. Daily sessions &amp; revenue</a></li>
+  <li><a href="#b.-channel-performance" id="toc-b.-channel-performance" class="nav-link" data-scroll-target="#b.-channel-performance"><span class="header-section-number">4.2</span> 4b. Channel performance</a></li>
+  <li><a href="#c.-funnel-analysis" id="toc-c.-funnel-analysis" class="nav-link" data-scroll-target="#c.-funnel-analysis"><span class="header-section-number">4.3</span> 4c. Funnel analysis</a></li>
+  <li><a href="#d.-device-breakdown" id="toc-d.-device-breakdown" class="nav-link" data-scroll-target="#d.-device-breakdown"><span class="header-section-number">4.4</span> 4d. Device breakdown</a></li>
   </ul></li>
-  <li><a href="#using-dplyr-on-arrow-alternative-to-raw-sql" id="toc-using-dplyr-on-arrow-alternative-to-raw-sql" class="nav-link" data-scroll-target="#using-dplyr-on-arrow-alternative-to-raw-sql"><span class="header-section-number">6</span> 5. Using dplyr on Arrow (alternative to raw SQL)</a></li>
-  <li><a href="#save-results-to-parquet-for-later-reuse" id="toc-save-results-to-parquet-for-later-reuse" class="nav-link" data-scroll-target="#save-results-to-parquet-for-later-reuse"><span class="header-section-number">7</span> 6. Save Results to Parquet (for later reuse)</a></li>
-  <li><a href="#cleanup" id="toc-cleanup" class="nav-link" data-scroll-target="#cleanup"><span class="header-section-number">8</span> 7. Cleanup</a></li>
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary"><span class="header-section-number">9</span> Workflow Summary</a></li>
+  <li><a href="#using-dplyr-on-arrow-alternative-to-raw-sql" id="toc-using-dplyr-on-arrow-alternative-to-raw-sql" class="nav-link" data-scroll-target="#using-dplyr-on-arrow-alternative-to-raw-sql"><span class="header-section-number">5</span> 5. Using dplyr on Arrow (alternative to raw SQL)</a></li>
+  <li><a href="#save-results-to-parquet-for-later-reuse" id="toc-save-results-to-parquet-for-later-reuse" class="nav-link" data-scroll-target="#save-results-to-parquet-for-later-reuse"><span class="header-section-number">6</span> 6. Save Results to Parquet (for later reuse)</a></li>
+  <li><a href="#cleanup" id="toc-cleanup" class="nav-link" data-scroll-target="#cleanup"><span class="header-section-number">7</span> 7. Cleanup</a></li>
+  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary"><span class="header-section-number">8</span> Workflow Summary</a></li>
   </ul>
 </nav>
     </div>
@@ -437,35 +437,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Contents</h2>
    
   <ul>
-  <li><a href="#setup" id="toc-setup"><span class="header-section-number">1</span> Setup</a>
+  <li><a href="#setup" id="toc-setup">Setup</a>
   <ul>
-  <li><a href="#install-load-packages" id="toc-install-load-packages"><span class="header-section-number">1.1</span> Install &amp; Load Packages</a></li>
+  <li><a href="#install-load-packages" id="toc-install-load-packages"><span class="header-section-number">0.1</span> Install &amp; Load Packages</a></li>
   </ul></li>
-  <li><a href="#connect-to-bigquery" id="toc-connect-to-bigquery"><span class="header-section-number">2</span> 1. Connect to BigQuery</a></li>
-  <li><a href="#pull-data-from-bigquery-arrow-table" id="toc-pull-data-from-bigquery-arrow-table"><span class="header-section-number">3</span> 2. Pull Data from BigQuery → Arrow Table</a>
+  <li><a href="#connect-to-bigquery" id="toc-connect-to-bigquery"><span class="header-section-number">1</span> 1. Connect to BigQuery</a></li>
+  <li><a href="#pull-data-from-bigquery-arrow-table" id="toc-pull-data-from-bigquery-arrow-table"><span class="header-section-number">2</span> 2. Pull Data from BigQuery → Arrow Table</a>
   <ul>
-  <li><a href="#a.-date-range-helper" id="toc-a.-date-range-helper"><span class="header-section-number">3.1</span> 2a. Date range helper</a></li>
-  <li><a href="#b.-bigquery-sql-flatten-ga4-nested-structs" id="toc-b.-bigquery-sql-flatten-ga4-nested-structs"><span class="header-section-number">3.2</span> 2b. BigQuery SQL — flatten GA4 nested structs</a></li>
-  <li><a href="#c.-execute-capture-as-arrow-table" id="toc-c.-execute-capture-as-arrow-table"><span class="header-section-number">3.3</span> 2c. Execute &amp; capture as Arrow Table</a></li>
+  <li><a href="#a.-date-range-helper" id="toc-a.-date-range-helper"><span class="header-section-number">2.1</span> 2a. Date range helper</a></li>
+  <li><a href="#b.-bigquery-sql-flatten-ga4-nested-structs" id="toc-b.-bigquery-sql-flatten-ga4-nested-structs"><span class="header-section-number">2.2</span> 2b. BigQuery SQL — flatten GA4 nested structs</a></li>
+  <li><a href="#c.-execute-capture-as-arrow-table" id="toc-c.-execute-capture-as-arrow-table"><span class="header-section-number">2.3</span> 2c. Execute &amp; capture as Arrow Table</a></li>
   </ul></li>
-  <li><a href="#register-arrow-table-in-duckdb" id="toc-register-arrow-table-in-duckdb"><span class="header-section-number">4</span> 3. Register Arrow Table in DuckDB</a></li>
-  <li><a href="#analysis-with-duckdb-sql" id="toc-analysis-with-duckdb-sql"><span class="header-section-number">5</span> 4. Analysis with DuckDB SQL</a>
+  <li><a href="#register-arrow-table-in-duckdb" id="toc-register-arrow-table-in-duckdb"><span class="header-section-number">3</span> 3. Register Arrow Table in DuckDB</a></li>
+  <li><a href="#analysis-with-duckdb-sql" id="toc-analysis-with-duckdb-sql"><span class="header-section-number">4</span> 4. Analysis with DuckDB SQL</a>
   <ul>
-  <li><a href="#a.-daily-sessions-revenue" id="toc-a.-daily-sessions-revenue"><span class="header-section-number">5.1</span> 4a. Daily sessions &amp; revenue</a></li>
-  <li><a href="#b.-channel-performance" id="toc-b.-channel-performance"><span class="header-section-number">5.2</span> 4b. Channel performance</a></li>
-  <li><a href="#c.-funnel-analysis" id="toc-c.-funnel-analysis"><span class="header-section-number">5.3</span> 4c. Funnel analysis</a></li>
-  <li><a href="#d.-device-breakdown" id="toc-d.-device-breakdown"><span class="header-section-number">5.4</span> 4d. Device breakdown</a></li>
+  <li><a href="#a.-daily-sessions-revenue" id="toc-a.-daily-sessions-revenue"><span class="header-section-number">4.1</span> 4a. Daily sessions &amp; revenue</a></li>
+  <li><a href="#b.-channel-performance" id="toc-b.-channel-performance"><span class="header-section-number">4.2</span> 4b. Channel performance</a></li>
+  <li><a href="#c.-funnel-analysis" id="toc-c.-funnel-analysis"><span class="header-section-number">4.3</span> 4c. Funnel analysis</a></li>
+  <li><a href="#d.-device-breakdown" id="toc-d.-device-breakdown"><span class="header-section-number">4.4</span> 4d. Device breakdown</a></li>
   </ul></li>
-  <li><a href="#using-dplyr-on-arrow-alternative-to-raw-sql" id="toc-using-dplyr-on-arrow-alternative-to-raw-sql"><span class="header-section-number">6</span> 5. Using dplyr on Arrow (alternative to raw SQL)</a></li>
-  <li><a href="#save-results-to-parquet-for-later-reuse" id="toc-save-results-to-parquet-for-later-reuse"><span class="header-section-number">7</span> 6. Save Results to Parquet (for later reuse)</a></li>
-  <li><a href="#cleanup" id="toc-cleanup"><span class="header-section-number">8</span> 7. Cleanup</a></li>
-  <li><a href="#workflow-summary" id="toc-workflow-summary"><span class="header-section-number">9</span> Workflow Summary</a></li>
+  <li><a href="#using-dplyr-on-arrow-alternative-to-raw-sql" id="toc-using-dplyr-on-arrow-alternative-to-raw-sql"><span class="header-section-number">5</span> 5. Using dplyr on Arrow (alternative to raw SQL)</a></li>
+  <li><a href="#save-results-to-parquet-for-later-reuse" id="toc-save-results-to-parquet-for-later-reuse"><span class="header-section-number">6</span> 6. Save Results to Parquet (for later reuse)</a></li>
+  <li><a href="#cleanup" id="toc-cleanup"><span class="header-section-number">7</span> 7. Cleanup</a></li>
+  <li><a href="#workflow-summary" id="toc-workflow-summary"><span class="header-section-number">8</span> Workflow Summary</a></li>
   </ul>
 </nav>
-<section id="setup" class="level1" data-number="1">
-<h1 data-number="1"><span class="header-section-number">1</span> Setup</h1>
-<section id="install-load-packages" class="level2" data-number="1.1">
-<h2 data-number="1.1" class="anchored" data-anchor-id="install-load-packages"><span class="header-section-number">1.1</span> Install &amp; Load Packages</h2>
+<section id="setup" class="level1 unnumbered">
+<h1 class="unnumbered">Setup</h1>
+<section id="install-load-packages" class="level2" data-number="0.1">
+<h2 data-number="0.1" class="anchored" data-anchor-id="install-load-packages"><span class="header-section-number">0.1</span> Install &amp; Load Packages</h2>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -497,14 +497,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <hr>
 </section>
 </section>
-<section id="connect-to-bigquery" class="level1" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> 1. Connect to BigQuery</h1>
+<section id="connect-to-bigquery" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> 1. Connect to BigQuery</h1>
 <p>GA4 exports data to BigQuery in sharded daily tables named <code>events_YYYYMMDD</code>. The public dataset <code>bigquery-public-data.ga4_obfuscated_sample_ecommerce</code> is a great sandbox — no credentials required beyond a GCP project.</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Configuration ────────────────────────────────────────────────────────────</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>GCP_PROJECT <span class="ot">&lt;-</span> <span class="st">"ga4-bigquery-cppmsdm"</span> <span class="co"># &lt;-- change this</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>GCP_PROJECT <span class="ot">&lt;-</span> <span class="st">"Use Your Own Billable Project"</span> <span class="co"># &lt;-- change this</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>BQ_PROJECT <span class="ot">&lt;-</span> <span class="st">"bigquery-public-data"</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>BQ_DATASET <span class="ot">&lt;-</span> <span class="st">"ga4_obfuscated_sample_ecommerce"</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
@@ -552,16 +552,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <hr>
 </section>
-<section id="pull-data-from-bigquery-arrow-table" class="level1" data-number="3">
-<h1 data-number="3"><span class="header-section-number">3</span> 2. Pull Data from BigQuery → Arrow Table</h1>
+<section id="pull-data-from-bigquery-arrow-table" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> 2. Pull Data from BigQuery → Arrow Table</h1>
 <p>Rather than pulling everything into memory, we:</p>
 <ol type="1">
 <li>Write a focused SQL query in BigQuery (push-down filtering)</li>
 <li>Stream results directly into an <strong>Arrow Table</strong> (columnar, zero-copy)</li>
 <li>Hand it off to <strong>DuckDB</strong> for further in-process analytics</li>
 </ol>
-<section id="a.-date-range-helper" class="level2" data-number="3.1">
-<h2 data-number="3.1" class="anchored" data-anchor-id="a.-date-range-helper"><span class="header-section-number">3.1</span> 2a. Date range helper</h2>
+<section id="a.-date-range-helper" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="a.-date-range-helper"><span class="header-section-number">2.1</span> 2a. Date range helper</h2>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -578,8 +578,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </details>
 </div>
 </section>
-<section id="b.-bigquery-sql-flatten-ga4-nested-structs" class="level2" data-number="3.2">
-<h2 data-number="3.2" class="anchored" data-anchor-id="b.-bigquery-sql-flatten-ga4-nested-structs"><span class="header-section-number">3.2</span> 2b. BigQuery SQL — flatten GA4 nested structs</h2>
+<section id="b.-bigquery-sql-flatten-ga4-nested-structs" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="b.-bigquery-sql-flatten-ga4-nested-structs"><span class="header-section-number">2.2</span> 2b. BigQuery SQL — flatten GA4 nested structs</h2>
 <blockquote class="blockquote">
 <p>GA4 data is heavily nested (events → event_params, items, etc.). We unnest the key fields we need in SQL before pulling.</p>
 </blockquote>
@@ -667,8 +667,8 @@ WHERE _TABLE_SUFFIX BETWEEN '20210101' AND '20210131'
 </div>
 </div>
 </section>
-<section id="c.-execute-capture-as-arrow-table" class="level2" data-number="3.3">
-<h2 data-number="3.3" class="anchored" data-anchor-id="c.-execute-capture-as-arrow-table"><span class="header-section-number">3.3</span> 2c. Execute &amp; capture as Arrow Table</h2>
+<section id="c.-execute-capture-as-arrow-table" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="c.-execute-capture-as-arrow-table"><span class="header-section-number">2.3</span> 2c. Execute &amp; capture as Arrow Table</h2>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -760,8 +760,8 @@ $transaction_id &lt;string&gt;</code></pre>
 <hr>
 </section>
 </section>
-<section id="register-arrow-table-in-duckdb" class="level1" data-number="4">
-<h1 data-number="4"><span class="header-section-number">4</span> 3. Register Arrow Table in DuckDB</h1>
+<section id="register-arrow-table-in-duckdb" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> 3. Register Arrow Table in DuckDB</h1>
 <blockquote class="blockquote">
 <p>DuckDB can query Arrow Tables <strong>without copying data</strong> via zero-copy integration — ideal for large datasets.</p>
 </blockquote>
@@ -887,10 +887,10 @@ $transaction_id &lt;string&gt;
 1         main ga4_parquet</code></pre>
 <hr>
 </section>
-<section id="analysis-with-duckdb-sql" class="level1" data-number="5">
-<h1 data-number="5"><span class="header-section-number">5</span> 4. Analysis with DuckDB SQL</h1>
-<section id="a.-daily-sessions-revenue" class="level2" data-number="5.1">
-<h2 data-number="5.1" class="anchored" data-anchor-id="a.-daily-sessions-revenue"><span class="header-section-number">5.1</span> 4a. Daily sessions &amp; revenue</h2>
+<section id="analysis-with-duckdb-sql" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> 4. Analysis with DuckDB SQL</h1>
+<section id="a.-daily-sessions-revenue" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="a.-daily-sessions-revenue"><span class="header-section-number">4.1</span> 4a. Daily sessions &amp; revenue</h2>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -966,8 +966,8 @@ $transaction_id &lt;string&gt;
 </div>
 </div>
 </section>
-<section id="b.-channel-performance" class="level2" data-number="5.2">
-<h2 data-number="5.2" class="anchored" data-anchor-id="b.-channel-performance"><span class="header-section-number">5.2</span> 4b. Channel performance</h2>
+<section id="b.-channel-performance" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="b.-channel-performance"><span class="header-section-number">4.2</span> 4b. Channel performance</h2>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1019,8 +1019,8 @@ $transaction_id &lt;string&gt;
 </div>
 </div>
 </section>
-<section id="c.-funnel-analysis" class="level2" data-number="5.3">
-<h2 data-number="5.3" class="anchored" data-anchor-id="c.-funnel-analysis"><span class="header-section-number">5.3</span> 4c. Funnel analysis</h2>
+<section id="c.-funnel-analysis" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="c.-funnel-analysis"><span class="header-section-number">4.3</span> 4c. Funnel analysis</h2>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1095,8 +1095,8 @@ $transaction_id &lt;string&gt;
 </div>
 </div>
 </section>
-<section id="d.-device-breakdown" class="level2" data-number="5.4">
-<h2 data-number="5.4" class="anchored" data-anchor-id="d.-device-breakdown"><span class="header-section-number">5.4</span> 4d. Device breakdown</h2>
+<section id="d.-device-breakdown" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="d.-device-breakdown"><span class="header-section-number">4.4</span> 4d. Device breakdown</h2>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1126,8 +1126,8 @@ $transaction_id &lt;string&gt;
 <hr>
 </section>
 </section>
-<section id="using-dplyr-on-arrow-alternative-to-raw-sql" class="level1" data-number="6">
-<h1 data-number="6"><span class="header-section-number">6</span> 5. Using dplyr on Arrow (alternative to raw SQL)</h1>
+<section id="using-dplyr-on-arrow-alternative-to-raw-sql" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> 5. Using dplyr on Arrow (alternative to raw SQL)</h1>
 <p>You can also use familiar <code>dplyr</code> verbs directly on the Arrow table. Arrow translates them to efficient columnar operations.</p>
 <div class="cell">
 <details open="" class="code-fold">
@@ -1157,8 +1157,8 @@ $transaction_id &lt;string&gt;
 </div>
 <hr>
 </section>
-<section id="save-results-to-parquet-for-later-reuse" class="level1" data-number="7">
-<h1 data-number="7"><span class="header-section-number">7</span> 6. Save Results to Parquet (for later reuse)</h1>
+<section id="save-results-to-parquet-for-later-reuse" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> 6. Save Results to Parquet (for later reuse)</h1>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1184,8 +1184,8 @@ $transaction_id &lt;string&gt;
 </div>
 <hr>
 </section>
-<section id="cleanup" class="level1" data-number="8">
-<h1 data-number="8"><span class="header-section-number">8</span> 7. Cleanup</h1>
+<section id="cleanup" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> 7. Cleanup</h1>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1195,8 +1195,8 @@ $transaction_id &lt;string&gt;
 </div>
 <hr>
 </section>
-<section id="workflow-summary" class="level1" data-number="9">
-<h1 data-number="9"><span class="header-section-number">9</span> Workflow Summary</h1>
+<section id="workflow-summary" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Workflow Summary</h1>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -1754,7 +1754,7 @@ $transaction_id &lt;string&gt;
 <span id="cb35-35"><a href="#cb35-35" aria-hidden="true" tabindex="-1"></a><span class="co">  freeze: auto</span></span>
 <span id="cb35-36"><a href="#cb35-36" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
 <span id="cb35-37"><a href="#cb35-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-38"><a href="#cb35-38" aria-hidden="true" tabindex="-1"></a><span class="fu"># Setup</span></span>
+<span id="cb35-38"><a href="#cb35-38" aria-hidden="true" tabindex="-1"></a><span class="fu"># Setup{.unnumbered}</span></span>
 <span id="cb35-39"><a href="#cb35-39" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-40"><a href="#cb35-40" aria-hidden="true" tabindex="-1"></a><span class="fu">## Install &amp; Load Packages</span></span>
 <span id="cb35-41"><a href="#cb35-41" aria-hidden="true" tabindex="-1"></a></span>
@@ -1797,7 +1797,7 @@ $transaction_id &lt;string&gt;
 <span id="cb35-84"><a href="#cb35-84" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: bigquery-connection</span></span>
 <span id="cb35-85"><a href="#cb35-85" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-86"><a href="#cb35-86" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Configuration ────────────────────────────────────────────────────────────</span></span>
-<span id="cb35-87"><a href="#cb35-87" aria-hidden="true" tabindex="-1"></a>GCP_PROJECT <span class="ot">&lt;-</span> <span class="st">"ga4-bigquery-cppmsdm"</span> <span class="co"># &lt;-- change this</span></span>
+<span id="cb35-87"><a href="#cb35-87" aria-hidden="true" tabindex="-1"></a>GCP_PROJECT <span class="ot">&lt;-</span> <span class="st">"Use Your Own Billable Project"</span> <span class="co"># &lt;-- change this</span></span>
 <span id="cb35-88"><a href="#cb35-88" aria-hidden="true" tabindex="-1"></a>BQ_PROJECT <span class="ot">&lt;-</span> <span class="st">"bigquery-public-data"</span></span>
 <span id="cb35-89"><a href="#cb35-89" aria-hidden="true" tabindex="-1"></a>BQ_DATASET <span class="ot">&lt;-</span> <span class="st">"ga4_obfuscated_sample_ecommerce"</span></span>
 <span id="cb35-90"><a href="#cb35-90" aria-hidden="true" tabindex="-1"></a></span>

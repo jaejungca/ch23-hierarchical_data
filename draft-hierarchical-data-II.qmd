@@ -35,9 +35,49 @@ execute:
   freeze: auto
 ---
 
+# Setup{.unnumbered}
+
+## Load Packages
+
+```{r}
+#| label: load-packages
+
+library(bigrquery)
+library(DBI)
+library(arrow)
+library(duckdb)
+library(duckplyr)
+library(tidyverse)
+```
+
+## Connect to BigQuery
+
+```{r}
+# ── Configuration ────────────────────────────────────────────────────────────
+GCP_PROJECT <- "ga4-bigquery-cppmsdm" # <-- change this
+BQ_PROJECT <- "bigquery-public-data"
+BQ_DATASET <- "ga4_obfuscated_sample_ecommerce"
+
+# Authenticate (opens browser on first run; token cached in ~/.cache/gargle)
+# bq_auth()                          # uncomment if not yet authed
+
+# bq_user()
+
+# Open a DBI connection to BigQuery
+bq_con <- dbConnect(
+  bigrquery::bigquery(),
+  project = BQ_PROJECT,
+  dataset = BQ_DATASET,
+  billing = GCP_PROJECT
+)
+
+# Confirm tables are visible
+dbListTables(bq_con)
+```
+
 # Part 3: Marketing Analytics in Practice {#part3}
 
-Now we assemble all the pieces into complete marketing analyses. Each section below builds an analytical table from the raw GA4 data using the rectangling tools we have learned, then produces a visualisation and interprets it.
+> Now we assemble all the pieces into complete marketing analyses. Each section below builds an analytical table from the raw GA4 data using the rectangling tools we have learned, then produces a visualisation and interprets it.
 
 ## Building the Master Analytical Table
 
@@ -958,8 +998,7 @@ ga4_raw |>
     x = NULL,
     y = "Share of Sessions"
   )
-``
-`
+```
 :::
 
 ::: {.callout-warning}
@@ -967,33 +1006,16 @@ ga4_raw |>
 
 **Average Items per Transaction**
 
-Using `
-unnest_longer()
-` + `
-unnest_wider()
-` on the `
-items
-` column,
+Using `unnest_longer()` + `unnest_wider()` on the `items` column,
 calculate:
 
 1. The average number of line items per purchase transaction
-2. The average `
-quantity
-` per line item
+2. The average `quantity` per line item
 3. The top 5 item categories by total revenue
 
-*Hint*: Filter to `
-event_name == "purchase"
-` first. The category field
-is `
-item_category
-`.
+*Hint*: Filter to `event_name == "purchase"` first. The category field is `item_category`.
 
-`
-``
-{
-  r
-}
+```{r}
 #| label: ex2
 #| eval: false
 #| code-fold: true
@@ -1043,9 +1065,7 @@ items_ex2 |>
     x = NULL,
     y = "Total Revenue (USD)"
   )
-`
-`
-`
+```
 :::
 
 ::: {.callout-warning}
@@ -1053,15 +1073,7 @@ items_ex2 |>
 
 **Page Depth Analysis**
 
-Extract the `
-page_location
-` and `
-ga_session_id
-` parameters from
-`
-event_params
-`. For each session, count the number of page views. Then
-create a histogram showing the distribution of pages-per-session.
+Extract the `page_location` and `ga_session_id` parameters from `event_params`. For each session, count the number of page views. Then create a histogram showing the distribution of pages-per-session.
 
 *Questions to answer*:
 
@@ -1069,11 +1081,7 @@ create a histogram showing the distribution of pages-per-session.
 - What percentage of sessions view only a single page (bounce-like behaviour)?
 - Does desktop show higher page depth than mobile?
 
-`
-``
-{
-  r
-}
+```{r}
 #| label: ex3
 #| eval: false
 #| code-fold: true
@@ -1115,8 +1123,7 @@ session_depth |>
     y = "Number of Sessions",
     fill = "Device"
   )
-``
-`
+```
 :::
 
 ::: {.callout-warning}
@@ -1126,21 +1133,12 @@ session_depth |>
 
 This exercise combines all three rectangling patterns:
 
-1. Use **Pattern 1** to extract `
-traffic_source_medium
-` and
-   `
-device_category
-`
-2. Use **Pattern 3** to extract `
-ga_session_number
-` from `
-event_params
-`
-   (identifies new vs. returning users)
-3. Identify which users completed a purchase (`
-event_name == "purchase"
-`)
+1. Use **Pattern 1** to extract `traffic_source_medium` and `device_category`
+
+2. Use **Pattern 3** to extract `ga_session_number` from `event_params` (identifies new vs. returning users)
+
+3. Identify which users completed a purchase (`event_name == "purchase"`)
+
 4. Build a summary table showing **conversion rate** broken down by:
    - New (session 1) vs. returning (session > 1)
    - Traffic channel
@@ -1149,11 +1147,7 @@ event_name == "purchase"
 *Challenge*: Which new-user + channel combination has the highest conversion
 rate? What does that suggest about marketing strategy?
 
-`
-``
-{
-  r
-}
+```{r}
 #| label: ex4
 #| eval: false
 #| code-fold: true
@@ -1222,9 +1216,7 @@ user_sessions |>
     palette = c("#ffffff", "#43a04720")
   ) |>
   opt_stylize(style = 1)
-`
-`
-`
+```
 :::
 
 ::: {.callout-warning}
@@ -1232,39 +1224,15 @@ user_sessions |>
 
 **Build Your Own Reusable Pipeline Function**
 
-The `
-flatten_ga4_params()
-` helper introduced in Part 2 has a fragile
-`
-tryCatch
-` block to handle different `
-bigrquery
-` output formats. Rewrite
-it as a robust, well-documented function that:
+The `flatten_ga4_params()` helper introduced in Part 2 has a fragile `tryCatch` block to handle different `bigrquery` output formats. Rewrite it as a robust, well-documented function that:
 
 1. Accepts any GA4 data frame and any key-value list-column name
-2. Detects whether the `
-value
-` struct has already been expanded by
-   checking column names
-3. Handles NULL or zero-row list elements gracefully using
-   `
-purrr::compact()
-`
-4. Returns a wide tibble joined back to the original data (not just the
-   params in isolation)
-5. Includes input validation with informative error messages using
-   `
-rlang::abort()
-`
-
-*Test it on both `
-event_params
-` and `
-user_properties
-`.*
+2. Detects whether the `value` struct has already been expanded by checking column names
+3. Handles NULL or zero-row list elements gracefully using `purrr::compact()`
+4. Returns a wide tibble joined back to the original data (not just the params in isolation)
+5. Includes input validation with informative error messages using `rlang::abort()` 
+    *Test it on both `event_params` and `user_properties`.*
 :::
-
 ---
 
 # Summary {#summary}
@@ -1277,65 +1245,23 @@ This document extended R4DS Chapter 23 in two important directions:
 
 | Tool | GA4 Use Case |
 |------|-------------|
-| `
-unnest_wider()
-` | Flatten `
-device
-`, `
-geo
-`, `
-traffic_source
-`, `
-ecommerce
-` struct columns |
-| `
-unnest_longer()
-` | Expand `
-items
-` array and first-stage expansion of `
-event_params
-` |
-| `
-hoist()
-` | Fast targeted extraction of specific struct fields |
-| Both combined | Fully rectangling the `
-items
-` repeated struct array |
+| `unnest_wider()` | Flatten `device`, `geo`, `traffic_source`, `ecommerce` struct columns |
+| `unnest_longer()` | Expand `items` array and first-stage expansion of `event_params` |
+| `hoist()` | Fast targeted extraction of specific struct fields |
+| Both combined | Fully rectangling the `items` repeated struct array |
 
 ### Beyond R4DS (GA4-Specific)
 
 | Problem | Solution |
 |---------|---------|
-| Key-value struct arrays (`
-event_params
-`) | 3-stage pipeline: `
-unnest_longer()
-` → `
-unnest_wider()
-` ×2 → `
-coalesce()
-` → `
-pivot_wider()
-` |
-| Union-type value structs | `
-dplyr::coalesce()
-` across the four typed value columns |
-| BigQuery INT64 types | `
-bigint = "numeric"
-` in `
-bq_table_download()
-` |
-| Scale/performance | Download once → cache as `
-.rds
-` → load locally |
+| Key-value struct arrays (`event_params`) | 3-stage pipeline: `unnest_longer()` → `unnest_wider()` ×2 → `coalesce()` → `pivot_wider()` |
+| Union-type value structs | `dplyr::coalesce()` across the four typed value columns |
+| BigQuery INT64 types | `bigint = "numeric"` in `bq_table_download()` |
+| Scale/performance | Download once → cache as `.rds` → load locally |
 
 ## The Three Patterns at a Glance
 
-`
-``
-{
-  r
-}
+```{r}
 #| label: final-summary-diagram
 #| echo: false
 
@@ -1392,4 +1318,3 @@ sessioninfo::session_info()
 # Reference
 
 -   [R for Data Science, Ch23](https://r4ds.hadley.nz/rectangling.html)
-:::
