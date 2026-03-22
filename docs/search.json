@@ -4,21 +4,49 @@
     "href": "index.html",
     "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
     "section": "",
-    "text": "A practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis."
+    "text": "Google Analytics 4 (GA4) stores event data in deeply nested, hierarchical structures in BigQuery — a format optimized for collection, but challenging for analysis. This series of notebooks walks through the full analytics engineering workflow: from understanding the raw nested structure, to downloading and storing data efficiently, to answering real marketing questions at scale.\n\n\n\n\n\n\nCautionCaution for Coding Accuracy\n\n\n\nYou are advised to be aware of potential inaccuracy of the coding provided on this site. Depending on the computer setup, IDE you used, packages you installed, how you want to save you your GA4 data, some adjusmtents are expected.\nAlso, due to limitations of publicl GA4 data, some data is blank (e.g., user properties), leading to no insights for the variables in the demonstration.\n\n\n\n\n\n\n\n\nWarning\n\n\n\nWorking with large data makes you slow. Saving data in parquet solve the problem. However, GA4’s deeply nested data present challenges in saving them in your local computer. All the demonstrations were made on a relatively small GA4 data (i.e., 7 days) with about 400,000 rows of events. You are expected to save the file in eihter RDS or qs files on your computer.\nEven though they are not big, it took very long time to flatten event params data when RDS or qs data were read into RAM.\nTo solve this problem, it is worth looking into Data Acquisition Guide for GA4 Public Data"
+  },
+  {
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
+    "section": "",
+    "text": "Google Analytics 4 (GA4) stores event data in deeply nested, hierarchical structures in BigQuery — a format optimized for collection, but challenging for analysis. This series of notebooks walks through the full analytics engineering workflow: from understanding the raw nested structure, to downloading and storing data efficiently, to answering real marketing questions at scale.\n\n\n\n\n\n\nCautionCaution for Coding Accuracy\n\n\n\nYou are advised to be aware of potential inaccuracy of the coding provided on this site. Depending on the computer setup, IDE you used, packages you installed, how you want to save you your GA4 data, some adjusmtents are expected.\nAlso, due to limitations of publicl GA4 data, some data is blank (e.g., user properties), leading to no insights for the variables in the demonstration.\n\n\n\n\n\n\n\n\nWarning\n\n\n\nWorking with large data makes you slow. Saving data in parquet solve the problem. However, GA4’s deeply nested data present challenges in saving them in your local computer. All the demonstrations were made on a relatively small GA4 data (i.e., 7 days) with about 400,000 rows of events. You are expected to save the file in eihter RDS or qs files on your computer.\nEven though they are not big, it took very long time to flatten event params data when RDS or qs data were read into RAM.\nTo solve this problem, it is worth looking into Data Acquisition Guide for GA4 Public Data"
+  },
+  {
+    "objectID": "index.html#what-you-will-learn",
+    "href": "index.html#what-you-will-learn",
+    "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
+    "section": "What You Will Learn",
+    "text": "What You Will Learn\n\nRectangling — how to flatten nested list-columns using tidyr verbs like unnest_longer(), unnest_wider(), and hoist()\nGA4-specific challenges — handling union-type value structs, key-value event_params arrays, and BigQuery INT64 types\nEfficient storage — comparing RDS, qs2, Parquet, Arrow, and DuckDB for local caching of GA4 data\nLarge-scale analytics — using Arrow and DuckDB to query GA4 data without loading everything into RAM\nMarketing analytics — translating business questions into R code using GA4 event data"
+  },
+  {
+    "objectID": "index.html#the-ga4-data-challenge",
+    "href": "index.html#the-ga4-data-challenge",
+    "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
+    "section": "The GA4 Data Challenge",
+    "text": "The GA4 Data Challenge\nGA4 event data from BigQuery is not a flat table. Every row contains nested structs and repeated arrays:\n\n\n\n\n\n\n\n\nColumn\nStructure\nChallenge\n\n\n\n\nevent_params\nKey-value struct array\nRequires 3-stage unnesting pipeline\n\n\nitems\nRepeated struct array\nRequires combined unnest_longer() + unnest_wider()\n\n\ndevice\nNested struct\nRequires unnest_wider() or hoist()\n\n\ngeo\nNested struct\nRequires unnest_wider() or hoist()\n\n\ntraffic_source\nNested struct\nRequires unnest_wider() or hoist()\n\n\necommerce\nNested struct\nRequires unnest_wider() or hoist()"
+  },
+  {
+    "objectID": "index.html#workflow",
+    "href": "index.html#workflow",
+    "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
+    "section": "Workflow",
+    "text": "Workflow\nBigQuery → Download → Local Cache → Rectangle → Analyze → Visualize\n↓              ↓            ↓           ↓\nbigrquery       qs2/        tidyr/       dplyr/\nParquet      DuckDB      ggplot2/gt"
   },
   {
     "objectID": "index.html#introduction",
     "href": "index.html#introduction",
     "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
-    "section": "",
-    "text": "A practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis."
+    "section": "Introduction",
+    "text": "Introduction\nA practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis."
   },
   {
-    "objectID": "index.html#tools",
-    "href": "index.html#tools",
+    "objectID": "index.html#tools-used",
+    "href": "index.html#tools-used",
     "title": "GA4 Analytics Engineering with R, Arrow & DuckDB & Parquet",
-    "section": "Tools",
-    "text": "Tools\nR · tidyr · tidyverse · JSON · Quarto · bigrquery · arrow · duckdb · dplyr · purrr"
+    "section": "Tools Used",
+    "text": "Tools Used\n\n\n\n\n\n\n\nTool\nRole\n\n\n\n\nR\nPrimary programming language\n\n\nQuarto\nReproducible notebook and website authoring\n\n\ntidyverse\nCore collection of R packages for data science\n\n\ntidyr\nRectangle nested list-columns with unnest_* and hoist()\n\n\ndplyr\nData wrangling, filtering, and summarizing\n\n\npurrr\nFunctional programming for working with nested lists\n\n\nJSON\nIntermediate format for preserving nested GA4 structures\n\n\nbigrquery\nDownload GA4 event data from Google BigQuery\n\n\narrow\nColumnar storage and Parquet file format support\n\n\nduckdb\nFast in-memory and on-disk analytical queries\n\n\nqs2\nFast local caching of R objects with nested list support\n\n\ngt / gtExtras\nPublication-quality tables\n\n\nggplot2\nData visualization"
   },
   {
     "objectID": "hierarchical-data-I.html",

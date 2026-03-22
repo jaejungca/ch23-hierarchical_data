@@ -384,8 +384,12 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a></li>
-  <li><a href="#tools" id="toc-tools" class="nav-link" data-scroll-target="#tools">Tools</a></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#what-you-will-learn" id="toc-what-you-will-learn" class="nav-link" data-scroll-target="#what-you-will-learn">What You Will Learn</a></li>
+  <li><a href="#the-ga4-data-challenge" id="toc-the-ga4-data-challenge" class="nav-link" data-scroll-target="#the-ga4-data-challenge">The GA4 Data Challenge</a></li>
+  <li><a href="#workflow" id="toc-workflow" class="nav-link" data-scroll-target="#workflow">Workflow</a></li>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link" data-scroll-target="#introduction">Introduction</a></li>
+  <li><a href="#tools-used" id="toc-tools-used" class="nav-link" data-scroll-target="#tools-used">Tools Used</a></li>
   </ul>
 </nav>
     <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(5)</span></div><div class="category" data-category="QXJyb3c=">Arrow <span class="quarto-category-count">(2)</span></div><div class="category" data-category="QmlnUXVlcnk=">BigQuery <span class="quarto-category-count">(2)</span></div><div class="category" data-category="YmlncnF1ZXJ5">bigrquery <span class="quarto-category-count">(2)</span></div><div class="category" data-category="ZHBseXI=">dplyr <span class="quarto-category-count">(1)</span></div><div class="category" data-category="RHVja0RC">DuckDB <span class="quarto-category-count">(2)</span></div><div class="category" data-category="Z2dwbG90Mg==">ggplot2 <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3Q=">gt <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3RFeHRyYQ==">gtExtra <span class="quarto-category-count">(1)</span></div><div class="category" data-category="SlNPTg==">JSON <span class="quarto-category-count">(1)</span></div><div class="category" data-category="UGFycXVldA==">Parquet <span class="quarto-category-count">(2)</span></div><div class="category" data-category="cXMy">qs2 <span class="quarto-category-count">(1)</span></div><div class="category" data-category="U1FM">SQL <span class="quarto-category-count">(2)</span></div><div class="category" data-category="dGlkeXI=">tidyr <span class="quarto-category-count">(2)</span></div><div class="category" data-category="dGlkeXZlcnNl">tidyverse <span class="quarto-category-count">(3)</span></div></div></div>
@@ -413,13 +417,178 @@ window.Quarto = {
 </header>
 
 
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>Google Analytics 4 (GA4) stores event data in <strong>deeply nested, hierarchical structures</strong> in BigQuery — a format optimized for collection, but challenging for analysis. This series of notebooks walks through the full analytics engineering workflow: from understanding the raw nested structure, to downloading and storing data efficiently, to answering real marketing questions at scale.</p>
+<div class="callout callout-style-default callout-caution callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Caution</span>Caution for Coding Accuracy
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>You are advised to be aware of potential inaccuracy of the coding provided on this site. Depending on the computer setup, IDE you used, packages you installed, how you want to save you your GA4 data, some adjusmtents are expected.</p>
+<p>Also, due to limitations of publicl GA4 data, some data is blank (e.g., user properties), leading to no insights for the variables in the demonstration.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Working with large data makes you slow. Saving data in <code>parquet</code> solve the problem. However, GA4’s deeply nested data present challenges in saving them in your local computer. All the demonstrations were made on a relatively small GA4 data (i.e., 7 days) with about 400,000 rows of events. You are expected to save the file in eihter <code>RDS</code> or <code>qs</code> files on your computer.</p>
+<p>Even though they are not big, it took very long time to flatten event params data when RDS or qs data were read into RAM.</p>
+<p>To solve this problem, it is worth looking into <a href="https://jaejungca.github.io/ch22-arrow/ga4_data_setup.html">Data Acquisition Guide for GA4 Public Data</a></p>
+</div>
+</div>
+</section>
+<section id="what-you-will-learn" class="level2">
+<h2 class="anchored" data-anchor-id="what-you-will-learn">What You Will Learn</h2>
+<ul>
+<li><strong>Rectangling</strong> — how to flatten nested list-columns using <code>tidyr</code> verbs like <code>unnest_longer()</code>, <code>unnest_wider()</code>, and <code>hoist()</code></li>
+<li><strong>GA4-specific challenges</strong> — handling union-type value structs, key-value <code>event_params</code> arrays, and BigQuery INT64 types</li>
+<li><strong>Efficient storage</strong> — comparing RDS, <code>qs2</code>, Parquet, Arrow, and DuckDB for local caching of GA4 data</li>
+<li><strong>Large-scale analytics</strong> — using Arrow and DuckDB to query GA4 data without loading everything into RAM</li>
+<li><strong>Marketing analytics</strong> — translating business questions into R code using GA4 event data</li>
+</ul>
+</section>
+<section id="the-ga4-data-challenge" class="level2">
+<h2 class="anchored" data-anchor-id="the-ga4-data-challenge">The GA4 Data Challenge</h2>
+<p>GA4 event data from BigQuery is <strong>not a flat table</strong>. Every row contains nested structs and repeated arrays:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 36%">
+<col style="width: 36%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Structure</th>
+<th>Challenge</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>event_params</code></td>
+<td>Key-value struct array</td>
+<td>Requires 3-stage unnesting pipeline</td>
+</tr>
+<tr class="even">
+<td><code>items</code></td>
+<td>Repeated struct array</td>
+<td>Requires combined <code>unnest_longer()</code> + <code>unnest_wider()</code></td>
+</tr>
+<tr class="odd">
+<td><code>device</code></td>
+<td>Nested struct</td>
+<td>Requires <code>unnest_wider()</code> or <code>hoist()</code></td>
+</tr>
+<tr class="even">
+<td><code>geo</code></td>
+<td>Nested struct</td>
+<td>Requires <code>unnest_wider()</code> or <code>hoist()</code></td>
+</tr>
+<tr class="odd">
+<td><code>traffic_source</code></td>
+<td>Nested struct</td>
+<td>Requires <code>unnest_wider()</code> or <code>hoist()</code></td>
+</tr>
+<tr class="even">
+<td><code>ecommerce</code></td>
+<td>Nested struct</td>
+<td>Requires <code>unnest_wider()</code> or <code>hoist()</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="workflow" class="level2">
+<h2 class="anchored" data-anchor-id="workflow">Workflow</h2>
+<pre><code>BigQuery → Download → Local Cache → Rectangle → Analyze → Visualize
+↓              ↓            ↓           ↓
+bigrquery       qs2/        tidyr/       dplyr/
+Parquet      DuckDB      ggplot2/gt</code></pre>
+</section>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
 <p>A practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis.</p>
 </section>
-<section id="tools" class="level2">
-<h2 class="anchored" data-anchor-id="tools">Tools</h2>
-<p><code>R</code> · <code>tidyr</code> · <code>tidyverse</code> · <code>JSON</code> · <code>Quarto</code> · <code>bigrquery</code> · <code>arrow</code> · <code>duckdb</code> · <code>dplyr</code> · <code>purrr</code></p>
+<section id="tools-used" class="level2">
+<h2 class="anchored" data-anchor-id="tools-used">Tools Used</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tool</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>R</code></td>
+<td>Primary programming language</td>
+</tr>
+<tr class="even">
+<td><code>Quarto</code></td>
+<td>Reproducible notebook and website authoring</td>
+</tr>
+<tr class="odd">
+<td><code>tidyverse</code></td>
+<td>Core collection of R packages for data science</td>
+</tr>
+<tr class="even">
+<td><code>tidyr</code></td>
+<td>Rectangle nested list-columns with <code>unnest_*</code> and <code>hoist()</code></td>
+</tr>
+<tr class="odd">
+<td><code>dplyr</code></td>
+<td>Data wrangling, filtering, and summarizing</td>
+</tr>
+<tr class="even">
+<td><code>purrr</code></td>
+<td>Functional programming for working with nested lists</td>
+</tr>
+<tr class="odd">
+<td><code>JSON</code></td>
+<td>Intermediate format for preserving nested GA4 structures</td>
+</tr>
+<tr class="even">
+<td><code>bigrquery</code></td>
+<td>Download GA4 event data from Google BigQuery</td>
+</tr>
+<tr class="odd">
+<td><code>arrow</code></td>
+<td>Columnar storage and Parquet file format support</td>
+</tr>
+<tr class="even">
+<td><code>duckdb</code></td>
+<td>Fast in-memory and on-disk analytical queries</td>
+</tr>
+<tr class="odd">
+<td><code>qs2</code></td>
+<td>Fast local caching of R objects with nested list support</td>
+</tr>
+<tr class="even">
+<td><code>gt</code> / <code>gtExtras</code></td>
+<td>Publication-quality tables</td>
+</tr>
+<tr class="odd">
+<td><code>ggplot2</code></td>
+<td>Data visualization</td>
+</tr>
+</tbody>
+</table>
 
 
 
