@@ -1,5 +1,5 @@
 ---
-title: "Rectangling GA4 Hierarchical Data: Understanding GA4 Data"
+title: "Rectangling GA4 Hierarchical Data: Part I - Understanding GA4 Data"
 subtitle: "Applying R4DS Chapter 23 Concepts to GA4 Data from BigQuery"
 description: "This document bridges R for Data Science Chapter 23 (Rectangling) and the real-world complexity of Google Analytics 4 (GA4) data stored in BigQuery. You will learn to transform deeply nested, hierarchical event data into flat, analysis-ready tables"
 categories: [bigrquery, tidyr, tidyverse]

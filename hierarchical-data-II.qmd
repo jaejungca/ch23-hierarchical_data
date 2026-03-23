@@ -1,5 +1,5 @@
 ---
-title: "Rectangling GA4 Hierarchical Data: Part II "
+title: "Rectangling GA4 Hierarchical Data: Part II - Focusing on Marketing Insights"
 subtitle: "Answering Marketing Questions about GA4 Data"
 description: "Following up on Par I, this document shows what marketing questions can be asked for GA4 Data and how to answer them"
 categories: [bigrquery, qs2, dplyr, ggplot2, gt, gtExtra, tidyverse]
