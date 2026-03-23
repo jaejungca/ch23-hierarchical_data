@@ -21,15 +21,16 @@ format:
 
 Google Analytics 4 (GA4) stores event data in **deeply nested, hierarchical structures** in BigQuery — a format optimized for collection, but challenging for analysis. This series of notebooks walks through the full analytics engineering workflow: from understanding the raw nested structure, to downloading and storing data efficiently, to answering real marketing questions at scale.
 
-::: {.callout-caution}
+::: callout-caution
 ### Caution for Coding Accuracy
+
 You are advised to be aware of potential inaccuracy of the coding provided on this site. Depending on the computer setup, IDE you used, packages you installed, how you want to save you your GA4 data, some adjusmtents are expected.
 
-Also, due to limitations of publicl GA4 data, some data is blank (e.g., user properties), leading to no insights for the variables in the demonstration. 
+Also, due to limitations of publicl GA4 data, some data is blank (e.g., user properties), leading to no insights for the variables in the demonstration.
 :::
 
-:::::: {.callout-warning}
-Working with large data makes you slow. Saving data in `parquet` solve the problem. However, GA4's deeply nested data present challenges in saving them in your local computer. All the demonstrations were made on a relatively small GA4 data (i.e., 7 days) with about 400,000 rows of events. You are expected to save the file in eihter `RDS` or `qs` files on your computer. 
+::: callout-warning
+Working with large data makes you slow. Saving data in `parquet` solve the problem. However, GA4's deeply nested data present challenges in saving them in your local computer. All the demonstrations were made on a relatively small GA4 data (i.e., 7 days) with about 400,000 rows of events. You are expected to save the file in eihter `RDS` or `qs` files on your computer.
 
 Even though they are not big, it took very long time to flatten event params data when RDS or qs data were read into RAM.
 
@@ -38,18 +39,18 @@ To solve this problem, it is worth looking into [Data Acquisition Guide for GA4 
 
 ## What You Will Learn
 
-- **Rectangling** — how to flatten nested list-columns using `tidyr` verbs like `unnest_longer()`, `unnest_wider()`, and `hoist()`
-- **GA4-specific challenges** — handling union-type value structs, key-value `event_params` arrays, and BigQuery INT64 types
-- **Efficient storage** — comparing RDS, `qs2`, Parquet, Arrow, and DuckDB for local caching of GA4 data
-- **Large-scale analytics** — using Arrow and DuckDB to query GA4 data without loading everything into RAM
-- **Marketing analytics** — translating business questions into R code using GA4 event data
+-   **Rectangling** — how to flatten nested list-columns using `tidyr` verbs like `unnest_longer()`, `unnest_wider()`, and `hoist()`
+-   **GA4-specific challenges** — handling union-type value structs, key-value `event_params` arrays, and BigQuery INT64 types
+-   **Efficient storage** — comparing RDS, `qs2`, Parquet, Arrow, and DuckDB for local caching of GA4 data
+-   **Large-scale analytics** — using Arrow and DuckDB to query GA4 data without loading everything into RAM
+-   **Marketing analytics** — translating business questions into R code using GA4 event data
 
 ## The GA4 Data Challenge
 
 GA4 event data from BigQuery is **not a flat table**. Every row contains nested structs and repeated arrays:
 
 | Column | Structure | Challenge |
-|--------|-----------|-----------|
+|--------------------|--------------------------|--------------------------|
 | `event_params` | Key-value struct array | Requires 3-stage unnesting pipeline |
 | `items` | Repeated struct array | Requires combined `unnest_longer()` + `unnest_wider()` |
 | `device` | Nested struct | Requires `unnest_wider()` or `hoist()` |
@@ -58,7 +59,8 @@ GA4 event data from BigQuery is **not a flat table**. Every row contains nested 
 | `ecommerce` | Nested struct | Requires `unnest_wider()` or `hoist()` |
 
 ## Workflow
-```
+
+```         
 BigQuery → Download → Local Cache → Rectangle → Analyze → Visualize
 ↓              ↓            ↓           ↓
 bigrquery       qs2/        tidyr/       dplyr/
@@ -67,25 +69,22 @@ Parquet      DuckDB      ggplot2/gt
 
 ## Introduction
 
-A practical guide to downloading, storing, and analyzing Google Analytics 4 
-event data using modern R tools — from BigQuery extraction to high-performance 
-local analysis.
+A practical guide to downloading, storing, and analyzing Google Analytics 4 event data using modern R tools — from BigQuery extraction to high-performance local analysis.
 
 ## Tools Used
 
 | Tool | Role |
-|------|------|
-| `R` | Primary programming language |
-| `Quarto` | Reproducible notebook and website authoring |
-| `tidyverse` | Core collection of R packages for data science |
-| `tidyr` | Rectangle nested list-columns with `unnest_*` and `hoist()` |
-| `dplyr` | Data wrangling, filtering, and summarizing |
-| `purrr` | Functional programming for working with nested lists |
-| `JSON` | Intermediate format for preserving nested GA4 structures |
-| `bigrquery` | Download GA4 event data from Google BigQuery |
-| `arrow` | Columnar storage and Parquet file format support |
-| `duckdb` | Fast in-memory and on-disk analytical queries |
-| `qs2` | Fast local caching of R objects with nested list support |
-| `gt` / `gtExtras` | Publication-quality tables |
-| `ggplot2` | Data visualization |
-
+|-------------------|-----------------------------------------------------------------------|
+| [`R`](https://www.r-project.org/) | Primary programming language |
+| [`Quarto`](https://quarto.org/) | Reproducible notebook and website authoring |
+| [`tidyverse`](https://www.tidyverse.org/) | Core collection of R packages for data science |
+| [`tidyr`](https://tidyr.tidyverse.org/) | Rectangle nested list-columns with `unnest_*` and `hoist()` |
+| [`dplyr`](https://dplyr.tidyverse.org/) | Data wrangling, filtering, and summarizing |
+| [`purrr`](https://purrr.tidyverse.org/) | Functional programming for working with nested lists |
+| [`JSON`](https://www.json.org/) | Intermediate format for preserving nested GA4 structures |
+| [`bigrquery`](https://bigrquery.r-dbi.org/) | Download GA4 event data from Google BigQuery |
+| [`arrow`](https://arrow.apache.org/docs/r/) | Columnar storage and Parquet file format support |
+| [`duckdb`](https://duckdb.org/) | Fast in-memory and on-disk analytical queries |
+| [`qs2`](https://github.com/traversc/qs2) | Fast local caching of R objects with nested list support |
+| [`gt`](https://gt.rstudio.com/) / [`gtExtras`](https://jthomasmock.github.io/gtExtras/) | Publication-quality tables |
+| [`ggplot2`](https://ggplot2.tidyverse.org/) | Data visualization |
